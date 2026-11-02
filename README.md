@@ -1,11 +1,44 @@
-# AsteAI demo package
+# AsteAI Platform
 
-- `index.html` is the standalone deployable demo.
-- `src/` contains editable reference splits extracted from the same source. Deploy `index.html`, not the `src/` files.
-- `_headers` sets a few basic response headers.
+Multi-sided AI hiring and talent marketplace. NestJS API + Next.js 14 frontend, AWS RDS (PostgreSQL), Bun monorepo.
 
-## Cloudflare Pages
-Create a Pages project from this folder/repository. Use no build command and set the build output directory to `.`. The root must contain `index.html`.
+## Quick start
 
-## Demo-only limitations
-This is a prototype reconstructed from the supplied source-code PDF. It uses browser `localStorage` and seeded sample data, not a production backend. Voice input depends on browser support. Live interpretation depends on the original Claude `sample` capability and may not be available on a normal static host. Do not enter real candidate data, credentials, or payment details. Test the primary demo flows in a fresh/incognito browser before presenting.
+```bash
+bun install
+
+# Copy and fill .env files
+cp apps/api/.env.example apps/api/.env.local
+cp apps/web/.env.example apps/web/.env.local
+
+# Run DB migration
+psql $DATABASE_URL -f packages/db/migrations/001_initial_schema.sql
+
+# Dev servers
+bun run dev:api   # :3001
+bun run dev:web   # :3000
+```
+
+Swagger: http://localhost:3001/api/docs
+
+## Structure
+
+```
+apps/api   → NestJS REST API
+apps/web   → Next.js 14 frontend
+packages/
+  types    → Shared TypeScript types
+  db/      → SQL migrations
+docs/      → ARCHITECTURE.md
+```
+
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full developer guide.
+
+## Roles
+
+Employer · Candidate · Freelancer · Buyer · Admin
+
+## Prior art
+
+Rewrite of `deeptech_backend` (Express) + `deeptech_frontend` (React SPA).  
+Connects to `deeptech_ai` for IRT scoring, translation, and LLM features.

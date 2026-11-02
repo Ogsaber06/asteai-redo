@@ -1,0 +1,56 @@
+.page { display: flex; flex-direction: column; gap: 20px; }
+
+.card {
+  background: linear-gradient(150deg, #141334, #0A0918 60%);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+}
+
+.glow {
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(77,139,255,.25), transparent 65%);
+  pointer-events: none;
+}
+
+.top { display: flex; align-items: flex-start; justify-content: space-between; }
+
+.scores { display: flex; flex-direction: column; gap: 6px; }
+.scoreRow { display: grid; grid-template-columns: 1fr 200px 32px; gap: 8px; align-items: center; font-size: .84rem; }
+.scoreLabel { color: var(--fg-2); }
+.scoreBar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.scoreFill { height: 100%; background: var(--blue); border-radius: 3px; }
+.scoreVal { color: var(--fg-3); font-family: var(--font-mono); text-align: right; font-size: .78rem; }
+
+.stens { display: flex; flex-direction: column; gap: 8px; }
+.sten { display: grid; grid-template-columns: 40px 1fr 32px; gap: 8px; align-items: center; font-size: .84rem; }
+.stenLabel { color: var(--fg-3); font-family: var(--font-mono); font-size: .72rem; }
+.stenTrack { position: relative; height: 12px; background: var(--line); border-radius: 6px; }
+.stenFill {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid var(--bg);
+}
+.stenVal { font-family: var(--font-mono); color: var(--fg-2); text-align: right; }
+
+.footer { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+
+.hash { font-family: var(--font-mono); font-size: .64rem; color: var(--fg-3); word-break: break-all; flex: 1; }
+
+.verifs { display: flex; gap: 10px; flex-wrap: wrap; }
+.verif { font-size: .76rem; color: var(--mint); font-family: var(--font-mono); }

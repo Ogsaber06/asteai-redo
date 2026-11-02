@@ -1,0 +1,6 @@
+.page { display: flex; flex-direction: column; gap: 16px; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row  { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.left { display: flex; flex-direction: column; gap: 4px; }
+.reqTitle { font-weight: 600; }
+.meta { font-size: .8rem; color: var(--fg-2); }

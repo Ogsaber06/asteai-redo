@@ -1,0 +1,16 @@
+.page { display: flex; flex-direction: column; gap: 16px; }
+.card { display: flex; flex-direction: column; gap: 12px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.desc { font-size: .86rem; color: var(--fg-2); line-height: 1.45; }
+.milestones { display: flex; flex-direction: column; gap: 6px; }
+.milestone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-3);
+  border-radius: 8px;
+  font-size: .84rem;
+}
+.mAmt { margin-left: auto; font-family: var(--font-mono); color: var(--fg-2); }
+.footer { display: flex; gap: 20px; padding-top: 8px; border-top: 1px solid var(--line); }

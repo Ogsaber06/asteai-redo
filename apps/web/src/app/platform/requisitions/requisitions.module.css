@@ -1,0 +1,50 @@
+.page { display: flex; flex-direction: column; gap: 20px; }
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.card { display: flex; flex-direction: column; gap: 10px; }
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dim { font-size: .72rem; color: var(--fg-3); font-family: var(--font-mono); }
+
+.title { font-size: 1rem; }
+
+.meta {
+  display: flex;
+  gap: 6px;
+  font-size: .8rem;
+  color: var(--fg-2);
+  flex-wrap: wrap;
+}
+
+.weights { display: flex; flex-direction: column; gap: 4px; }
+
+.wRow  { display: grid; grid-template-columns: 32px 1fr 26px; gap: 6px; align-items: center; font-size: .76rem; }
+.wLabel { color: var(--fg-3); font-family: var(--font-mono); }
+.wTrack { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.wFill  { height: 100%; background: var(--blue); border-radius: 2px; }
+.wVal   { color: var(--fg-2); font-family: var(--font-mono); text-align: right; }
+
+.footer {
+  display: flex;
+  gap: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}

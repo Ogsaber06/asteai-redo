@@ -1,0 +1,89 @@
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(3,1,10,.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--top-h);
+  padding: 0 16px;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-decoration: none;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .95rem;
+}
+
+.mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: conic-gradient(from 210deg, var(--blue), #7C5CFF, var(--blue));
+  position: relative;
+}
+
+.mark::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 2px;
+  background: var(--bg);
+}
+
+.ctx {
+  color: var(--fg-3);
+  font-size: .82rem;
+}
+
+.who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.persona {
+  font-size: .84rem;
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+.bell {
+  background: var(--bg-3);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-3);
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: .84rem;
+  cursor: pointer;
+}
+
+.btn:hover { border-color: var(--blue); }

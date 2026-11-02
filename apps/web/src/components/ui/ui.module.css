@@ -1,0 +1,95 @@
+.panel {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-3);
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: .86rem;
+  white-space: nowrap;
+  transition: border-color .12s;
+}
+.btn:hover   { border-color: var(--blue); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.pri  { background: var(--blue);  border-color: var(--blue);  color: #fff; }
+.mint { background: var(--mint);  border-color: var(--mint);  color: #06281B; }
+.rose { background: transparent;  border-color: var(--rose);  color: var(--rose); }
+.sm   { padding: 5px 10px; font-size: .78rem; }
+
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .66rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--blue-soft);
+  color: var(--blue-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.gold   { background: var(--gold-soft);  color: var(--gold); }
+.mint   { background: var(--mint-soft);  color: var(--mint); }
+.rose   { background: var(--rose-soft);  color: var(--rose); }
+.amber  { background: var(--amber-soft); color: var(--amber); }
+.grey   { background: var(--bg-3);       color: var(--fg-2); }
+
+.kpi  { display: flex; flex-direction: column; gap: 4px; }
+.kpiV {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.kpiL { font-size: .78rem; color: var(--fg-3); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--blue-2);
+  font-weight: 600;
+}
+
+.empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--fg-3);
+  border: 1px dashed var(--line-2);
+  border-radius: 12px;
+}
+
+.progress {
+  height: 5px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  border-radius: 3px;
+}
+
+.bar   { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--blue); border-radius: 3px; }
+.g i   { background: var(--gold); }
+.m i   { background: var(--mint); }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: .76rem; font-weight: 600; color: var(--fg-2); }
