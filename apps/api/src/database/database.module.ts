@@ -1,17 +1,23 @@
-import { Module, Global, Logger, OnModuleInit } from '@nestjs/common';
+import { Module, Global, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Pool } from 'pg';
-import { execSync } from 'child_process';
 
 export const DB_POOL = 'DB_POOL';
 
 /**
- * RDS IAM auth wrapper.
+ * DatabaseModule
  *
- * When DATABASE_IAM_AUTH=true (no static password), we generate a fresh
- * IAM auth token every 14 minutes using the AWS CLI and recreate the pg Pool.
- * The pool reference exported via DB_POOL stays the same object — we swap
- * its internal `options.password` and drain/recreate connections lazily.
+ * Supports two auth modes controlled by DATABASE_IAM_AUTH:
+ *
+ *   false (default) — plain password from DATABASE_PASSWORD env var.
+ *                     Use this for local dev with a non-RDS Postgres.
+ *
+ *   true            — RDS IAM auth. No static password needed.
+ *                     Uses @aws-sdk/rds-signer to generate a short-lived
+ *                     token (valid 15 min). Token is refreshed every 14 min
+ *                     so the pool never uses an expired credential.
+ *                     The IAM role/user running the app must have the
+ *                     rds-db:connect permission (provisioned by Tofu).
  */
 @Global()
 @Module({
@@ -20,70 +26,64 @@ export const DB_POOL = 'DB_POOL';
       provide: DB_POOL,
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const iamAuth = config.get('DATABASE_IAM_AUTH') === 'true';
-        const host    = config.getOrThrow('DATABASE_HOST');
-        const port    = config.get<number>('DATABASE_PORT', 5432);
-        const database = config.getOrThrow('DATABASE_NAME');
-        const user    = config.getOrThrow('DATABASE_USER');
-        const maxPool = config.get<number>('DATABASE_MAX_POOL', 20);
-        const idleTimeout = config.get<number>('DATABASE_IDLE_TIMEOUT_MS', 30000);
-        const sslCert = config.get('DATABASE_SSL_CERT');  // path to rds-ca-bundle.pem
-
         const logger = new Logger('DatabaseModule');
 
-        const sslConfig = {
-          rejectUnauthorized: !!sslCert,
-          ...(sslCert ? { ca: require('fs').readFileSync(sslCert).toString() } : {}),
-        };
+        const iamAuth  = config.get('DATABASE_IAM_AUTH') === 'true';
+        const host     = config.getOrThrow('DATABASE_HOST');
+        const port     = config.get<number>('DATABASE_PORT', 5432);
+        const database = config.getOrThrow('DATABASE_NAME');
+        const user     = config.getOrThrow('DATABASE_USER');
+        const region   = config.get('AWS_REGION', 'ap-south-1');
+        const maxPool  = config.get<number>('DATABASE_MAX_POOL', 20);
+        const idleMs   = config.get<number>('DATABASE_IDLE_TIMEOUT_MS', 30000);
 
-        const getIamToken = (): string => {
-          const region = config.get('AWS_REGION', 'ap-south-1');
-          const cmd = `aws rds generate-db-auth-token --hostname ${host} --port ${port} --username ${user} --region ${region}`;
-          const token = execSync(cmd, { encoding: 'utf8' }).trim();
-          logger.log(`IAM token refreshed (expires in ~15 min)`);
-          return token;
-        };
+        // SSL config — RDS requires SSL. Node's built-in CA bundle already
+        // includes the Amazon root CA so no PEM file download is needed.
+        const ssl = config.get('DATABASE_SSL') === 'true'
+          ? { rejectUnauthorized: true }
+          : undefined;
 
-        const password = iamAuth ? getIamToken() : config.getOrThrow('DATABASE_PASSWORD');
+        // ── Token generator (IAM auth only) ───────────────────────────────
+        const makeToken = iamAuth
+          ? async (): Promise<string> => {
+              // Lazy-import so non-IAM deployments don't need the SDK package
+              const { Signer } = await import('@aws-sdk/rds-signer');
+              const signer = new Signer({ hostname: host, port, region, username: user });
+              const token = await signer.getAuthToken();
+              logger.log('RDS IAM token refreshed');
+              return token;
+            }
+          : null;
 
-        const pool = new Pool({
-          host,
-          port,
-          database,
-          user,
-          password,
-          max:              maxPool,
-          idleTimeoutMillis: idleTimeout,
-          ssl: sslConfig,
-        });
+        const password = iamAuth
+          ? await makeToken!()
+          : config.getOrThrow('DATABASE_PASSWORD');
 
-        pool.on('error', (err) => {
-          logger.error('[DB] Unexpected pool error:', err.message);
-        });
+        // ── Create pool ───────────────────────────────────────────────────
+        const pool = new Pool({ host, port, database, user, password, max: maxPool, idleTimeoutMillis: idleMs, ssl });
 
-        // Test the connection on startup
+        pool.on('error', (err) => logger.error('Unexpected pool error', err.message));
+
+        // Verify connection on startup
         try {
           const client = await pool.connect();
           const { rows } = await client.query('SELECT version()');
-          logger.log(`Connected: ${rows[0].version.split(' ').slice(0, 2).join(' ')}`);
           client.release();
+          logger.log(`Connected: ${(rows[0].version as string).split(' ').slice(0, 2).join(' ')}`);
         } catch (err: any) {
           logger.error(`DB connection failed: ${err.message}`);
           throw err;
         }
 
-        if (iamAuth) {
-          // Refresh token every 14 minutes (tokens last 15 min)
+        // ── Refresh IAM token every 14 min ────────────────────────────────
+        if (iamAuth && makeToken) {
           setInterval(async () => {
             try {
-              const newToken = getIamToken();
-              // Update pool password — new connections will use the new token.
-              // Existing idle connections will be evicted by the pool naturally.
-              (pool as any).options.password = newToken;
-              // Force-end all idle connections so they reconnect with the new token
-              await pool.query('SELECT 1').catch(() => {});
-            } catch (e: any) {
-              logger.error(`Failed to refresh IAM token: ${e.message}`);
+              const token = await makeToken();
+              // Swap password on the pool — new connections pick it up automatically
+              (pool as any).options.password = token;
+            } catch (err: any) {
+              logger.error(`Failed to refresh IAM token: ${err.message}`);
             }
           }, 14 * 60 * 1000);
         }

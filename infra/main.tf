@@ -120,7 +120,7 @@ module "rds_iam" {
   source = "./modules/iam"
 
   environment                 = var.environment
-  rds_resource_id_placeholder = "db-*" # tightened after first apply via output
+  rds_resource_id_placeholder = "db-PMXVL4ILU6NRITB7MVGLCEVRRQ"
   aws_region                  = var.aws_region
   account_id                  = var.account_id
   db_user                     = "asteai_app"
@@ -162,11 +162,10 @@ module "rds" {
 }
 
 # ── Schema initialisation ─────────────────────────────────────────────────────
-# Runs once after RDS is ready. Requires psql and aws CLI on the machine
-# running tofu apply (your laptop / CI runner).
+# Connects as the master user using the password stored in Secrets Manager.
+# The app user (asteai_app) uses IAM auth; the master user uses the password.
 resource "null_resource" "schema_init" {
   triggers = {
-    # Re-run only when the migration file changes
     schema_hash  = filesha256("${path.module}/../packages/db/migrations/001_initial_schema.sql")
     rds_endpoint = module.rds.endpoint
   }
@@ -180,45 +179,37 @@ resource "null_resource" "schema_init" {
       PORT="${module.rds.port}"
       USER="${module.rds.master_username}"
       REGION="${var.aws_region}"
-      CERT="/tmp/rds-ap-south-1-bundle.pem"
+      SECRET_ARN="${module.db_secret.secret_arn}"
 
-      echo "→ Downloading RDS CA bundle..."
-      curl -fsSL \
-        https://truststore.pki.rds.amazonaws.com/ap-south-1/ap-south-1-bundle.pem \
-        -o "$CERT"
+      echo "Fetching master password from Secrets Manager..."
+      export PGPASSWORD=$(aws secretsmanager get-secret-value \
+        --secret-id "$SECRET_ARN" \
+        --region "$REGION" \
+        --query SecretString \
+        --output text)
 
-      echo "→ Generating IAM auth token..."
-      export PGPASSWORD=$(aws rds generate-db-auth-token \
-        --hostname "$ENDPOINT" \
-        --port "$PORT" \
-        --username "$USER" \
-        --region "$REGION")
+      # sslmode=require — no PEM needed, psql trusts the system CA bundle
+      DSN="host=$ENDPOINT port=$PORT user=$USER sslmode=require"
 
-      echo "→ Waiting for RDS to accept connections..."
+      echo "Waiting for RDS to accept connections..."
       for i in $(seq 1 20); do
         pg_isready -h "$ENDPOINT" -p "$PORT" -U "$USER" && break
-        echo "  attempt $i/20 — sleeping 15s..."
+        echo "  attempt $i/20 - sleeping 15s..."
         sleep 15
       done
 
-      echo "→ Creating database and app user..."
-      PGSSLMODE=verify-full PGSSLROOTCERT="$CERT" \
-      psql "host=$ENDPOINT port=$PORT user=$USER dbname=postgres sslmode=verify-full sslrootcert=$CERT" <<SQL
-        CREATE DATABASE asteai
-          ENCODING 'UTF8'
-          LC_COLLATE 'en_US.UTF-8'
-          LC_CTYPE   'en_US.UTF-8'
-          TEMPLATE   template0;
-SQL
+      echo "Creating database (idempotent)..."
+      psql "$DSN dbname=postgres" \
+        -c "SELECT 1 FROM pg_database WHERE datname='asteai'" | grep -q 1 \
+        || psql "$DSN dbname=postgres" \
+             -c "CREATE DATABASE asteai ENCODING 'UTF8' LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8' TEMPLATE template0;"
 
-      echo "→ Running schema migration..."
-      PGSSLMODE=verify-full PGSSLROOTCERT="$CERT" \
-      psql "host=$ENDPOINT port=$PORT user=$USER dbname=asteai sslmode=verify-full sslrootcert=$CERT" \
+      echo "Running schema migration..."
+      psql "$DSN dbname=asteai" \
         -f "${path.module}/../packages/db/migrations/001_initial_schema.sql"
 
-      echo "→ Creating app user with IAM auth..."
-      PGSSLMODE=verify-full PGSSLROOTCERT="$CERT" \
-      psql "host=$ENDPOINT port=$PORT user=$USER dbname=asteai sslmode=verify-full sslrootcert=$CERT" <<SQL
+      echo "Creating app user with IAM auth (idempotent)..."
+      psql "$DSN dbname=asteai" <<SQL
         DO \$\$ BEGIN
           IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'asteai_app') THEN
             CREATE USER asteai_app;
@@ -239,9 +230,21 @@ SQL
           GRANT USAGE, SELECT                  ON SEQUENCES TO asteai_app;
 SQL
 
-      echo "✓ Schema initialisation complete."
+      echo "Schema initialisation complete."
     BASH
   }
 
   depends_on = [module.rds]
+}
+
+# -- Team DB access -----------------------------------------------------------
+module "team" {
+  source = "./modules/team"
+
+  environment     = var.environment
+  aws_region      = var.aws_region
+  account_id      = var.account_id
+  rds_resource_id = module.rds.resource_id
+  app_role_arn    = module.rds_iam.role_arn
+  team_members    = var.team_members
 }

@@ -72,6 +72,20 @@ variable "my_ip" {
     Added to the RDS security group so psql can reach it from your laptop.
     Run: curl -s https://checkip.amazonaws.com && echo /32
   DESC
-  type    = string
-  default = "0.0.0.0/0"   # Overridden to your real IP in tfvars
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "team_members" {
+  description = <<-DESC
+    Team members to grant RDS IAM auth + Secrets Manager read access.
+    iam_user must be an existing AWS IAM username.
+    can_assume_app_role = true lets them impersonate the app role locally.
+  DESC
+  type = list(object({
+    name                = string
+    iam_user            = string
+    can_assume_app_role = bool
+  }))
+  default = []
 }
