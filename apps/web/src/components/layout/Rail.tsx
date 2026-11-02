@@ -65,6 +65,7 @@ const NAV: Record<UserRole, Array<[string, Array<[string, string]>]>> = {
   Admin: [
     ['Master Control', [
       ['admin', 'Master Control'],
+      ['ai-interviews', 'AI Interviews'],
       ['tenants', 'Tenants & Plans'],
       ['integrity', 'Integrity Review'],
       ['trust', 'Trust & Safety'],

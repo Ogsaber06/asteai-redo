@@ -107,3 +107,70 @@ export function Field({
     </div>
   );
 }
+
+// ── Page header ───────────────────────────────────────────────────────────────
+export function PageHeader({
+  eyebrow, title, sub, actions,
+}: { eyebrow: string; title: React.ReactNode; sub?: React.ReactNode; actions?: React.ReactNode }) {
+  return (
+    <div className={styles.ph}>
+      <div>
+        <div className={styles.eyebrow}>{eyebrow}</div>
+        <h1>{title}</h1>
+        {sub && <p className={styles.phSub}>{sub}</p>}
+      </div>
+      {actions && <div className={styles.phActions}>{actions}</div>}
+    </div>
+  );
+}
+
+// ── Scene (a spoken line) ─────────────────────────────────────────────────────
+export function Scene({ who, children }: { who: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className={styles.scene}>
+      <span className={styles.who}>{who}</span>
+      <p className={styles.say}>{children}</p>
+    </div>
+  );
+}
+
+// ── Evidence line ─────────────────────────────────────────────────────────────
+export function Evidence({ title, children }: { title?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <div className={styles.ev}>
+      {title && <b>{title}</b>}
+      {children && <p className={styles.evQ}>{children}</p>}
+    </div>
+  );
+}
+
+// ── Chips (single choice) ─────────────────────────────────────────────────────
+export function Chips<T extends string>({
+  options, value, onChange, label,
+}: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void; label?: string }) {
+  return (
+    <div className={styles.chips} role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={value === o.id}
+          className={clsx(styles.chip, value === o.id && styles.chipOn)}
+          onClick={() => onChange(o.id)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Passport-style card ───────────────────────────────────────────────────────
+export function CertCard({ children }: { children: React.ReactNode }) {
+  return <div className={styles.pp}>{children}</div>;
+}
+
+export function Hash({ children }: { children: React.ReactNode }) {
+  return <span className={styles.hash}>{children}</span>;
+}

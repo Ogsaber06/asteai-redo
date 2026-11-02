@@ -21,6 +21,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { VoiceModule } from './modules/voice/voice.module';
+import { AiModule } from './modules/ai/ai.module';
+import { CertificatesModule } from './modules/certificates/certificates.module';
+import { InterviewsModule } from './modules/interviews/interviews.module';
 
 @Module({
   imports: [
@@ -49,6 +52,9 @@ import { VoiceModule } from './modules/voice/voice.module';
     NotificationsModule,
     LedgerModule,
     VoiceModule,
+    AiModule,
+    CertificatesModule,
+    InterviewsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

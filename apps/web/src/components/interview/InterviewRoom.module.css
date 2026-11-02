@@ -1,0 +1,42 @@
+/* Sits inside the studio .stage (720px). Uses the prototype's tokens only. */
+.room { display: flex; flex-direction: column; gap: 14px; }
+
+.stage { display: flex; flex-direction: column; gap: 14px; }
+.status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.phase { color: var(--fg-2); font-size: .86rem; }
+.timer { margin-left: auto; font-family: var(--font-mono); color: var(--gold); font-size: .82rem; }
+
+.media { position: relative; }
+.video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-3);
+  transform: scaleX(-1);
+}
+.mic {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  color: var(--blue-2);
+  font-size: 1.3rem;
+  transition: box-shadow .08s linear, background .12s;
+}
+.mic:disabled { opacity: .5; cursor: default; }
+.micOn { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+.notice { font-size: .84rem; color: var(--amber); background: var(--amber-soft); border-radius: 9px; padding: 8px 12px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.hint { color: var(--fg-3); font-size: .82rem; }
+
+.earlier { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.earlier p { font-size: .86rem; color: var(--fg-2); line-height: 1.5; }
