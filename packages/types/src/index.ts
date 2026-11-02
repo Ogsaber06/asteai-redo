@@ -1,8 +1,14 @@
+// @asteai/types
+// All string unions are exported as const arrays so bun 1.x can resolve them
+// at runtime. TypeScript consumers still get full type safety via typeof.
+
 // ─── User & Auth ─────────────────────────────────────────────────────────────
 
-export type UserRole = 'Employer' | 'Candidate' | 'Freelancer' | 'Buyer' | 'Admin';
+export const USER_ROLES = ['Employer', 'Candidate', 'Freelancer', 'Buyer', 'Admin'] as const;
+export type UserRole = typeof USER_ROLES[number];
 
-export type AccountStatus = 'active' | 'deactivated' | 'deleted';
+export const ACCOUNT_STATUSES = ['active', 'deactivated', 'deleted'] as const;
+export type AccountStatus = typeof ACCOUNT_STATUSES[number];
 
 export interface User {
   id: string;
@@ -24,7 +30,7 @@ export interface Tenant {
   id: string;
   name: string;
   industry: string;
-  plan: 'Free' | 'Growth' | 'Enterprise' | 'Marketplace' | '—';
+  plan: 'Free' | 'Growth' | 'Enterprise' | 'Marketplace' | '-';
   credits: number;
   seats: number;
   domain: string;
@@ -34,8 +40,11 @@ export interface Tenant {
 
 // ─── Requisitions & ATS ──────────────────────────────────────────────────────
 
-export type ReqStatus = 'Draft' | 'Open' | 'Paused' | 'Closed' | 'Filled';
-export type CandidateTier = 'Technical' | 'Non-Technical' | 'Frontline' | 'Skilled';
+export const REQ_STATUSES = ['Draft', 'Open', 'Paused', 'Closed', 'Filled'] as const;
+export type ReqStatus = typeof REQ_STATUSES[number];
+
+export const CANDIDATE_TIERS = ['Technical', 'Non-Technical', 'Frontline', 'Skilled'] as const;
+export type CandidateTier = typeof CANDIDATE_TIERS[number];
 
 export interface WeightConfig {
   iq: number;
@@ -71,16 +80,11 @@ export interface Requisition {
   stack: string[];
 }
 
-export type ApplicationStage =
-  | 'Applied'
-  | 'Eligibility'
-  | 'Assessment Pending'
-  | 'Assessment Review'
-  | 'Shortlisted'
-  | 'Interview'
-  | 'Offer'
-  | 'Joined'
-  | 'Rejected';
+export const APPLICATION_STAGES = [
+  'Applied', 'Eligibility', 'Assessment Pending', 'Assessment Review',
+  'Shortlisted', 'Interview', 'Offer', 'Joined', 'Rejected',
+] as const;
+export type ApplicationStage = typeof APPLICATION_STAGES[number];
 
 export interface HistoryEntry {
   t: number;
@@ -146,11 +150,7 @@ export interface AssessmentResult {
   fitScore: number;
   ci: number;
   integrity: 'Clear' | 'Review';
-  integ: {
-    blur: number;
-    paste: number;
-    fast: number;
-  };
+  integ: { blur: number; paste: number; fast: number };
   n: { iq: number; eq: number; grit: number };
   durationSeconds: number;
   date: number;
@@ -163,7 +163,8 @@ export interface AssessmentResult {
 
 // ─── Talent Passport ─────────────────────────────────────────────────────────
 
-export type PassportStatus = 'Valid' | 'Expired' | 'Revoked';
+export const PASSPORT_STATUSES = ['Valid', 'Expired', 'Revoked'] as const;
+export type PassportStatus = typeof PASSPORT_STATUSES[number];
 
 export interface Passport {
   id: string;
@@ -177,32 +178,23 @@ export interface Passport {
   issuedAt: number;
   validUntil: number;
   status: PassportStatus;
-  share: {
-    discoverable: boolean;
-    showIdentity: boolean;
-  };
+  share: { discoverable: boolean; showIdentity: boolean };
   verifications: Array<{ t: number; by: string }>;
 }
 
 // ─── Projects & Marketplace ──────────────────────────────────────────────────
 
-export type ProjectStage =
-  | 'Open for Bids'
-  | 'Shortlisting'
-  | 'Contracted'
-  | 'In Progress'
-  | 'Milestone Submitted'
-  | 'Completed'
-  | 'Disputed';
+export const PROJECT_STAGES = [
+  'Open for Bids', 'Shortlisting', 'Contracted',
+  'In Progress', 'Milestone Submitted', 'Completed', 'Disputed',
+] as const;
+export type ProjectStage = typeof PROJECT_STAGES[number];
 
-export type MilestoneStatus =
-  | 'Pending'
-  | 'Funded'
-  | 'Submitted'
-  | 'Accepted'
-  | 'Released'
-  | 'Disputed'
-  | 'Revision requested';
+export const MILESTONE_STATUSES = [
+  'Pending', 'Funded', 'Submitted', 'Accepted',
+  'Released', 'Disputed', 'Revision requested',
+] as const;
+export type MilestoneStatus = typeof MILESTONE_STATUSES[number];
 
 export interface Milestone {
   id: string;
@@ -242,14 +234,11 @@ export interface Project {
 
 // ─── Ledger ───────────────────────────────────────────────────────────────────
 
-export type LedgerType =
-  | 'Subscription'
-  | 'Credits'
-  | 'Escrow hold'
-  | 'Escrow release'
-  | 'Payout'
-  | 'Fee'
-  | 'Refund';
+export const LEDGER_TYPES = [
+  'Subscription', 'Credits', 'Escrow hold',
+  'Escrow release', 'Payout', 'Fee', 'Refund',
+] as const;
+export type LedgerType = typeof LEDGER_TYPES[number];
 
 export interface LedgerEntry {
   id: string;

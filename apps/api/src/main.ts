@@ -45,8 +45,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  // ── Swagger ──────────────────────────────────────────────────────────────
-  if (config.get('NODE_ENV') !== 'production') {
+  // ── Swagger (skip in bun dev mode due to decorator metadata incompatibility) ──
+  if (config.get('NODE_ENV') !== 'production' && typeof process.versions.bun === 'undefined') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('AsteAI Platform API')
       .setDescription('REST API for the AsteAI hiring & talent marketplace platform')

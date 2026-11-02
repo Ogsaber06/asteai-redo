@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@asteai/types": ["./src/types.ts"],
+      "@nestjs/swagger": ["./src/swagger-shim.ts"]
+    }
+  }
+}
