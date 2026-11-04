@@ -1,13 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { DB_POOL } from '../../database/database.module';
+import { generateId } from '../../common/utils/ids';
 
 @Injectable()
 export class LedgerService {
   constructor(@Inject(DB_POOL) private readonly db: Pool) {}
 
-  async findForTenant(tenantId: string, page = 1, pageSize = 50) {
-    const offset = (page - 1) * pageSize;
+  async findForTenant(tenantId: string, pageSize: number, offset: number) {
     const { rows } = await this.db.query(
       `SELECT * FROM ledger_entries WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
       [tenantId, pageSize, offset],
@@ -31,7 +31,7 @@ export class LedgerService {
     tenantId?: string; userId?: string; type: string; description: string;
     amount: number; unit?: string; payeeId?: string; fee?: number; by: string; ref?: string;
   }) {
-    const id = 'TX-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const id = generateId('TX');
     const { rows } = await this.db.query(
       `INSERT INTO ledger_entries
          (id, tenant_id, user_id, type, description, amount, unit, payee_id, fee, by, ref)

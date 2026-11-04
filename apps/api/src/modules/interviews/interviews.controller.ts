@@ -13,7 +13,7 @@ import { AiResultsKeyGuard } from '../../common/guards/ai-results-key.guard';
 import { CertificatesService } from '../certificates/certificates.service';
 import { catalogue } from './catalogue';
 import { StartMockInterviewDto } from './dto/start-mock-interview.dto';
-import { InterviewsService } from './interviews.service';
+import { InterviewsService, type AiResultPayload } from './interviews.service';
 
 @ApiTags('interviews')
 @ApiBearerAuth()
@@ -105,7 +105,7 @@ export class InternalResultsController {
 
   @Post('ai-results')
   @HttpCode(200)
-  receive(@Body() body: Record<string, any>) {
+  receive(@Body() body: { event?: unknown; data?: AiResultPayload }) {
     return this.svc.applyResult(String(body?.event ?? ''), body?.data ?? {});
   }
 }

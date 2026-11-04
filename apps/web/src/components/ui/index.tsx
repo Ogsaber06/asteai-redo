@@ -46,7 +46,7 @@ export function Button({
 }
 
 // ── Tag ──────────────────────────────────────────────────────────────────────
-type TagColor = 'default' | 'gold' | 'mint' | 'rose' | 'amber' | 'grey';
+export type TagColor = 'default' | 'gold' | 'mint' | 'rose' | 'amber' | 'grey';
 
 export function Tag({
   children, color = 'default',

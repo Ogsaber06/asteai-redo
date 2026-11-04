@@ -1,12 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
+import type { AdminStats } from '@asteai/types';
 import { DB_POOL } from '../../database/database.module';
 
 @Injectable()
 export class AdminService {
   constructor(@Inject(DB_POOL) private readonly db: Pool) {}
 
-  async getMasterStats() {
+  async getMasterStats(): Promise<AdminStats> {
     const [tenants, users, reqs, apps, passports] = await Promise.all([
       this.db.query(`SELECT COUNT(*) FROM tenants`),
       this.db.query(`SELECT role, COUNT(*) FROM user_accounts WHERE account_status = 'active' GROUP BY role`),
@@ -23,8 +24,7 @@ export class AdminService {
     };
   }
 
-  async getAuditLog(page = 1, pageSize = 50) {
-    const offset = (page - 1) * pageSize;
+  async getAuditLog(pageSize: number, offset: number) {
     const { rows } = await this.db.query(
       `SELECT * FROM audit_log ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
       [pageSize, offset],
@@ -33,8 +33,7 @@ export class AdminService {
   }
 
   async setFeatureFlag(name: string, value: boolean, actorId: string) {
-    // Feature flags stored in a settings JSONB in a config table
-    // For now we use a simple dedicated approach
+    // TODO: persist flags in a settings table; for now the change is only audited.
     await this.db.query(
       `INSERT INTO audit_log (actor_id, action, entity, meta)
        VALUES ($1, 'set_feature_flag', $2, $3)`,

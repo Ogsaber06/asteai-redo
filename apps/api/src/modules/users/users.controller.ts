@@ -4,6 +4,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '@asteai/types';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -18,10 +19,7 @@ export class UsersController {
   }
 
   @Put('me')
-  updateMe(
-    @CurrentUser() user: User,
-    @Body() body: { firstName?: string; lastName?: string; title?: string; avatarUrl?: string; lang?: string },
-  ) {
+  updateMe(@CurrentUser() user: User, @Body() body: UpdateProfileDto) {
     return this.svc.updateProfile(user.id, body);
   }
 }

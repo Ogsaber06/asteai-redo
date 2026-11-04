@@ -1,17 +1,27 @@
-import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
-import { DB_POOL } from '../../database/database.module';
-import { User } from '@asteai/types';
+import type { User } from '@asteai/types';
+import { DB_POOL, withTransaction } from '../../database/database.module';
+import { generateId } from '../../common/utils/ids';
+import { SubmitProposalDto } from './dto/submit-proposal.dto';
 
 @Injectable()
 export class ProposalsService {
   constructor(@Inject(DB_POOL) private readonly db: Pool) {}
 
-  async findForProject(projectId: string) {
+  /** Only the project's buyer (or an admin) sees the bids on it. */
+  async findForProject(projectId: string, user: User) {
+    const { rows: projectRows } = await this.db.query<{ buyer_id: string }>(
+      `SELECT buyer_id FROM projects WHERE id = $1`,
+      [projectId],
+    );
+    if (!projectRows.length) throw new NotFoundException('Project not found');
+    if (projectRows[0].buyer_id !== user.id && user.role !== 'Admin') throw new ForbiddenException();
+
     const { rows } = await this.db.query(
-      `SELECT p.*, u.first_name || ' ' || u.last_name AS expert_name
-       FROM proposals p JOIN user_accounts u ON p.expert_id = u.id
-       WHERE p.project_id = $1 ORDER BY p.created_at ASC`,
+      `SELECT p.*, CONCAT_WS(' ', u.first_name, u.last_name) AS expert_name
+         FROM proposals p JOIN user_accounts u ON p.expert_id = u.id
+        WHERE p.project_id = $1 ORDER BY p.created_at ASC`,
       [projectId],
     );
     return rows;
@@ -20,50 +30,63 @@ export class ProposalsService {
   async findMine(userId: string) {
     const { rows } = await this.db.query(
       `SELECT p.*, pr.title AS project_title, pr.stage AS project_stage
-       FROM proposals p JOIN projects pr ON p.project_id = pr.id
-       WHERE p.expert_id = $1 ORDER BY p.created_at DESC`,
+         FROM proposals p JOIN projects pr ON p.project_id = pr.id
+        WHERE p.expert_id = $1 ORDER BY p.created_at DESC`,
       [userId],
     );
     return rows;
   }
 
-  async submit(dto: { projectId: string; price: number; days: number; note?: string }, user: User) {
-    const existing = await this.db.query(
-      `SELECT id FROM proposals WHERE project_id = $1 AND expert_id = $2`,
-      [dto.projectId, user.id],
+  async submit(dto: SubmitProposalDto, user: User) {
+    const { rows: projectRows } = await this.db.query<{ stage: string }>(
+      `SELECT stage FROM projects WHERE id = $1`,
+      [dto.projectId],
     );
-    if (existing.rows.length) return existing.rows[0];
+    if (!projectRows.length) throw new NotFoundException('Project not found');
+    if (projectRows[0].stage !== 'Open for Bids') throw new BadRequestException('This project is not taking bids');
 
-    const id = 'P-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    // Idempotent: a second bid (even a concurrent one) returns the existing proposal.
     const { rows } = await this.db.query(
       `INSERT INTO proposals (id, project_id, expert_id, price, days, note)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [id, dto.projectId, user.id, dto.price, dto.days, dto.note ?? ''],
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (project_id, expert_id) DO NOTHING
+       RETURNING *`,
+      [generateId('P'), dto.projectId, user.id, dto.price, dto.days, dto.note ?? ''],
     );
-    return rows[0];
+    if (rows.length) return rows[0];
+    const existing = await this.db.query(
+      `SELECT * FROM proposals WHERE project_id = $1 AND expert_id = $2`,
+      [dto.projectId, user.id],
+    );
+    return existing.rows[0];
   }
 
+  /** Awards one bid and rejects the rest, atomically. */
   async award(proposalId: string, user: User) {
-    const { rows: pRows } = await this.db.query(`SELECT * FROM proposals WHERE id = $1`, [proposalId]);
-    if (!pRows.length) throw new NotFoundException();
-    const proposal = pRows[0];
+    return withTransaction(this.db, async (client) => {
+      const { rows: pRows } = await client.query(`SELECT * FROM proposals WHERE id = $1`, [proposalId]);
+      if (!pRows.length) throw new NotFoundException('Proposal not found');
+      const proposal = pRows[0];
 
-    const { rows: prRows } = await this.db.query(`SELECT * FROM projects WHERE id = $1`, [proposal.project_id]);
-    if (!prRows.length) throw new NotFoundException();
-    if (prRows[0].buyer_id !== user.id) throw new ForbiddenException();
+      const { rows: prRows } = await client.query(
+        `SELECT buyer_id, stage FROM projects WHERE id = $1 FOR UPDATE`,
+        [proposal.project_id],
+      );
+      if (!prRows.length) throw new NotFoundException('Project not found');
+      if (prRows[0].buyer_id !== user.id) throw new ForbiddenException();
+      if (prRows[0].stage === 'Contracted') throw new BadRequestException('This project has already been awarded');
 
-    await this.db.query(
-      `UPDATE proposals SET status = 'Rejected' WHERE project_id = $1 AND id != $2`,
-      [proposal.project_id, proposalId],
-    );
-    await this.db.query(
-      `UPDATE proposals SET status = 'Awarded' WHERE id = $1`,
-      [proposalId],
-    );
-    await this.db.query(
-      `UPDATE projects SET stage = 'Contracted', awarded_to = $1 WHERE id = $2`,
-      [proposal.expert_id, proposal.project_id],
-    );
-    return { awarded: true, projectId: proposal.project_id, expertId: proposal.expert_id };
+      await client.query(
+        `UPDATE proposals
+            SET status = CASE WHEN id = $2 THEN 'Awarded' ELSE 'Rejected' END, updated_at = NOW()
+          WHERE project_id = $1`,
+        [proposal.project_id, proposalId],
+      );
+      await client.query(
+        `UPDATE projects SET stage = 'Contracted', awarded_to = $1, updated_at = NOW() WHERE id = $2`,
+        [proposal.expert_id, proposal.project_id],
+      );
+      return { awarded: true, projectId: proposal.project_id, expertId: proposal.expert_id };
+    });
   }
 }

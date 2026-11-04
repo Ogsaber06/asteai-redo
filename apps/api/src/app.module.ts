@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
+import { validateEnv } from './config/env.validation';
+
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -13,9 +15,6 @@ import { AssessmentsModule } from './modules/assessments/assessments.module';
 import { PassportsModule } from './modules/passports/passports.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { ProposalsModule } from './modules/proposals/proposals.module';
-import { ContractsModule } from './modules/contracts/contracts.module';
-import { MarketplaceModule } from './modules/marketplace/marketplace.module';
-// NOTE: MediaModule — add when S3 upload is wired
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -24,10 +23,13 @@ import { VoiceModule } from './modules/voice/voice.module';
 import { AiModule } from './modules/ai/ai.module';
 import { CertificatesModule } from './modules/certificates/certificates.module';
 import { InterviewsModule } from './modules/interviews/interviews.module';
+import { AssistantModule } from './modules/assistant/assistant.module';
+import { HealthModule } from './modules/health/health.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'], validate: validateEnv }),
 
     ThrottlerModule.forRoot([
       { name: 'short',  ttl: 1000,  limit: 10 },
@@ -45,8 +47,6 @@ import { InterviewsModule } from './modules/interviews/interviews.module';
     PassportsModule,
     ProjectsModule,
     ProposalsModule,
-    ContractsModule,
-    MarketplaceModule,
     AnalyticsModule,
     AdminModule,
     NotificationsModule,
@@ -55,6 +55,9 @@ import { InterviewsModule } from './modules/interviews/interviews.module';
     AiModule,
     CertificatesModule,
     InterviewsModule,
+    AssistantModule,
+    HealthModule,
+    EmailModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

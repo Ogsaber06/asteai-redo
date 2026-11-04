@@ -1,17 +1,19 @@
 import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, type QueryResultRow } from 'pg';
 import { DB_POOL } from '../../database/database.module';
+import { assertTenantAccess } from '../../common/utils/access';
 import { CreateRequisitionDto } from './dto/create-requisition.dto';
 import { UpdateRequisitionDto } from './dto/update-requisition.dto';
-import { User } from '@asteai/types';
+import { ReqStatus, Requisition, User } from '@asteai/types';
+import { generateId } from '../../common/utils/ids';
+import { Pagination } from '../../common/utils/pagination';
 
 @Injectable()
 export class RequisitionsService {
   constructor(@Inject(DB_POOL) private readonly db: Pool) {}
 
-  async findAll(user: User, filters: { status?: string; page?: number; pageSize?: number }) {
-    const { page = 1, pageSize = 20, status } = filters;
-    const offset = (page - 1) * pageSize;
+  async findAll(user: User, filters: Pagination & { status?: ReqStatus }) {
+    const { page, pageSize, offset, status } = filters;
 
     const conditions: string[] = [];
     const values: unknown[] = [];
@@ -48,7 +50,7 @@ export class RequisitionsService {
       values,
     );
 
-    return { data: rows.map(this.mapRow), total, page, pageSize };
+    return { data: rows.map((r) => this.mapRow(r)), total, page, pageSize };
   }
 
   async findOne(id: string, user: User) {
@@ -61,9 +63,7 @@ export class RequisitionsService {
     );
     if (!rows.length) throw new NotFoundException(`Requisition ${id} not found`);
     const req = rows[0];
-    if (user.role !== 'Admin' && req.tenant_id !== user.tenantId) {
-      throw new ForbiddenException();
-    }
+    assertTenantAccess(user, req.tenant_id);
     return this.mapRow(req);
   }
 
@@ -77,7 +77,7 @@ export class RequisitionsService {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING *`,
       [
-        this.genId('REQ'), user.tenantId, user.id,
+        generateId('REQ'), user.tenantId, user.id,
         dto.title, dto.industry, dto.func, dto.echLevel, dto.tier,
         dto.weights.iq, dto.weights.eq, dto.weights.grit,
         dto.lang, dto.location, dto.headcount,
@@ -120,38 +120,35 @@ export class RequisitionsService {
     return this.mapRow(rows[0]);
   }
 
-  private mapRow(row: Record<string, unknown>) {
+  private mapRow(row: QueryResultRow): Requisition {
+    const iso = (v: unknown) => (v == null ? null : new Date(v as string).toISOString());
     return {
-      id:          row.id,
-      tenantId:    row.tenant_id,
-      ownerId:     row.owner_id,
-      ownerName:   row.owner_name,
-      title:       row.title,
-      industry:    row.industry,
-      func:        row.func,
-      echLevel:    row.ech_level,
-      tier:        row.tier,
-      weights:     { iq: row.weight_iq, eq: row.weight_eq, grit: row.weight_grit },
-      lang:        row.language,
-      location:    row.location,
-      headcount:   row.headcount,
+      id:           row.id,
+      tenantId:     row.tenant_id,
+      ownerId:      row.owner_id,
+      ownerName:    row.owner_name,
+      title:        row.title,
+      industry:     row.industry,
+      func:         row.func,
+      echLevel:     row.ech_level,
+      tier:         row.tier,
+      weights:      { iq: row.weight_iq, eq: row.weight_eq, grit: row.weight_grit },
+      lang:         row.language,
+      location:     row.location,
+      headcount:    row.headcount,
       minShortlist: row.min_shortlist,
-      threshold:   row.threshold,
-      status:      row.status,
+      threshold:    row.threshold,
+      status:       row.status,
       sla: {
-        funded:      row.sla_funded,
-        start:       row.sla_start_at,
-        paused:      row.sla_paused_at,
-        delivered:   row.sla_delivered_at,
+        funded:    Boolean(row.sla_funded),
+        start:     iso(row.sla_start_at),
+        paused:    iso(row.sla_paused_at),
+        delivered: iso(row.sla_delivered_at),
       },
-      stack:       row.stack,
-      brief:       row.brief,
-      createdAt:   row.created_at,
-      updatedAt:   row.updated_at,
+      stack:        row.stack ?? [],
+      brief:        row.brief,
+      createdAt:    iso(row.created_at) ?? '',
+      updatedAt:    iso(row.updated_at) ?? '',
     };
-  }
-
-  private genId(prefix: string) {
-    return prefix + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
   }
 }

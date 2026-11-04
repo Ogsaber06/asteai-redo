@@ -13,6 +13,10 @@ import { AiService } from '../ai/ai.service';
 import { domainsFor, findFrontlineRole } from './catalogue';
 import { StartMockInterviewDto } from './dto/start-mock-interview.dto';
 
+/** JSON posted by deeptech_ai. Untrusted: every field is checked before it is used. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AiResultPayload = Record<string, any>;
+
 export const EVENT_MOCK_INTERVIEW_COMPLETED = 'mock_interview.completed';
 export const EVENT_ASSESSMENT_SCORED = 'candidate_assessment.scored';
 
@@ -186,7 +190,7 @@ export class InterviewsService {
    * is kept for inspection. Always resolves: a result the platform cannot use is not
    * something deeptech_ai can fix by retrying.
    */
-  async applyResult(event: string, data: Record<string, any>) {
+  async applyResult(event: string, data: AiResultPayload) {
     const refId = String(data?.mock_interview_id ?? data?.interview_ref_id ?? '') || null;
     const { rows } = await this.db.query(
       `INSERT INTO ai_result_events (event, ref_id, payload) VALUES ($1, $2, $3::jsonb) RETURNING id`,
@@ -199,8 +203,8 @@ export class InterviewsService {
       if (event === EVENT_MOCK_INTERVIEW_COMPLETED) error = await this.applyMockCompleted(data);
       else if (event === EVENT_ASSESSMENT_SCORED) error = await this.applyAssessmentScored(data);
       else error = `unknown event ${event}`;
-    } catch (err: any) {
-      error = err?.message ?? String(err);
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
     }
 
     await this.db.query(`UPDATE ai_result_events SET applied = $2, error = $3 WHERE id = $1`, [
@@ -210,7 +214,7 @@ export class InterviewsService {
     return { accepted: true, applied: error === null };
   }
 
-  private async applyMockCompleted(d: Record<string, any>): Promise<string | null> {
+  private async applyMockCompleted(d: AiResultPayload): Promise<string | null> {
     if (!UUID.test(String(d.mock_interview_id ?? ''))) return 'mock_interview_id is not a uuid';
     const turns = Number.isFinite(Number(d.turns)) ? Math.max(0, Math.min(Number(d.turns), 1000)) : 0;
     const res = await this.db.query(
@@ -240,7 +244,7 @@ export class InterviewsService {
     return res.rowCount ? null : 'no interview with this id';
   }
 
-  private async applyAssessmentScored(d: Record<string, any>): Promise<string | null> {
+  private async applyAssessmentScored(d: AiResultPayload): Promise<string | null> {
     const type = String(d.interview_type ?? '');
     const ref = String(d.interview_ref_id ?? '');
     if (!type || !ref) return 'interview_type and interview_ref_id are required';

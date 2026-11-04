@@ -1,30 +1,38 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import helmet from 'helmet';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
 
+const API_PREFIX = 'api/v1';
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
+    logger: process.env.NODE_ENV === 'production'
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'debug'],
   });
 
   const config = app.get(ConfigService);
-  const port = config.get<number>('PORT', 3001);
-  const origins = config.get<string>('CORS_ORIGINS', 'http://localhost:3000').split(',');
+  const port = Number(config.get('PORT', 3001));
+  const isProduction = config.get('NODE_ENV') === 'production';
+  const origins = config
+    .get<string>('CORS_ORIGINS', 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   // ── Security middleware ──────────────────────────────────────────────────
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
-
   app.enableCors({
     origin: origins,
     credentials: true,
@@ -42,24 +50,29 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
+  // Health probes stay at the root so the load balancer config doesn't depend on the API version.
+  app.setGlobalPrefix(API_PREFIX, { exclude: ['livez', 'readyz'] });
 
-  app.setGlobalPrefix('api/v1');
+  // Close the DB pool and in-flight requests cleanly on SIGTERM (ECS / Docker stop).
+  app.enableShutdownHooks();
 
-  // ── Swagger (skip in bun dev mode due to decorator metadata incompatibility) ──
-  if (config.get('NODE_ENV') !== 'production' && typeof process.versions.bun === 'undefined') {
+  // ── Swagger (skipped under Bun: its decorator metadata breaks @nestjs/swagger) ──
+  if (!isProduction && typeof process.versions.bun === 'undefined') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('AsteAI Platform API')
       .setDescription('REST API for the AsteAI hiring & talent marketplace platform')
       .setVersion('1.0')
       .addBearerAuth()
       .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document);
+    SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
     logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
   }
 
   await app.listen(port);
-  logger.log(`API running on http://localhost:${port}/api/v1`);
+  logger.log(`API running on http://localhost:${port}/${API_PREFIX}`);
 }
 
-bootstrap();
+bootstrap().catch((err: unknown) => {
+  new Logger('Bootstrap').error('API failed to start', err instanceof Error ? err.stack : String(err));
+  process.exit(1);
+});

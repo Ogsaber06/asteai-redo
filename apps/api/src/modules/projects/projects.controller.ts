@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { ProjectsService } from './projects.service';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { User } from '@asteai/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { User } from '@asteai/types';
+import { paginate } from '../../common/utils/pagination';
+import { CreateProjectDto, UpdateMilestoneDto, UpdateProjectStageDto } from './dto/project.dto';
+import { ProjectsService } from './projects.service';
 
 @ApiTags('projects')
 @ApiBearerAuth()
@@ -15,8 +17,8 @@ export class ProjectsController {
   constructor(private readonly svc: ProjectsService) {}
 
   @Get('open')
-  findOpen(@Query('page') page = 1, @Query('pageSize') pageSize = 20) {
-    return this.svc.findOpen(+page, +pageSize);
+  findOpen(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.svc.findOpen(paginate(page, pageSize));
   }
 
   @Get('mine')
@@ -38,13 +40,13 @@ export class ProjectsController {
 
   @Post()
   @Roles('Buyer')
-  create(@Body() body: any, @CurrentUser() user: User) {
+  create(@Body() body: CreateProjectDto, @CurrentUser() user: User) {
     return this.svc.create(body, user);
   }
 
   @Patch(':id/stage')
   @Roles('Buyer', 'Admin')
-  updateStage(@Param('id') id: string, @Body() body: { stage: string }, @CurrentUser() user: User) {
+  updateStage(@Param('id') id: string, @Body() body: UpdateProjectStageDto, @CurrentUser() user: User) {
     return this.svc.updateStage(id, body.stage, user);
   }
 
@@ -52,10 +54,10 @@ export class ProjectsController {
   @Roles('Buyer', 'Freelancer', 'Admin')
   updateMilestone(
     @Param('id') id: string,
-    @Param('milestoneId') mid: string,
-    @Body() body: { status: string },
+    @Param('milestoneId') milestoneId: string,
+    @Body() body: UpdateMilestoneDto,
     @CurrentUser() user: User,
   ) {
-    return this.svc.updateMilestone(id, mid, body.status, user);
+    return this.svc.updateMilestone(id, milestoneId, body.status, user);
   }
 }

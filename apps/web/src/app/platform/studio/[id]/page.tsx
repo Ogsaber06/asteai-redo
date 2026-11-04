@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import useSWR from 'swr';
+import { errorMessage } from '@/lib/api';
 import { Panel, Button, Tag, Eyebrow, Empty, KPI, Bar, PageHeader, Evidence } from '@/components/ui';
 import { InterviewRoom } from '@/components/interview/InterviewRoom';
 import {
@@ -74,7 +75,7 @@ function Report({ interview: i }: { interview: MockInterviewDetail }) {
   const download = async () => {
     setDownloading(true);
     setDlError(null);
-    try { await downloadCertificate(i.id); } catch (e: any) { setDlError(e?.message ?? 'Download failed'); }
+    try { await downloadCertificate(i.id); } catch (e) { setDlError(errorMessage(e, 'Download failed')); }
     setDownloading(false);
   };
 
