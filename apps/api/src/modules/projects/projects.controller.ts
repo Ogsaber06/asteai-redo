@@ -21,6 +21,35 @@ export class ProjectsController {
     return this.svc.findOpen(paginate(page, pageSize));
   }
 
+  @Get('services')
+  findServices() {
+    return this.svc.findServices();
+  }
+
+  @Get('experts')
+  findExperts() {
+    return this.svc.findExperts();
+  }
+
+  @Get('disputes')
+  findDisputes(@CurrentUser() user: User) {
+    return this.svc.findDisputes(user);
+  }
+
+  @Post('disputes')
+  createDispute(
+    @Body() body: { projectId?: string; raisedAgainst: string; reason: string },
+    @CurrentUser() user: User,
+  ) {
+    return this.svc.createDispute(body, user);
+  }
+
+  @Patch('disputes/:id/resolve')
+  @Roles('Admin')
+  resolveDispute(@Param('id') id: string, @Body() body: { resolution: string }) {
+    return this.svc.resolveDispute(id, body.resolution);
+  }
+
   @Get('mine')
   @Roles('Buyer')
   myProjects(@CurrentUser() user: User) {

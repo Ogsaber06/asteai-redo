@@ -65,11 +65,40 @@ async function bootstrap() {
       .addBearerAuth()
       .build();
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
-    logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
   }
 
+  // ── Root & status endpoints ─────────────────────────────────────────────
+  const apiStatusHandler = (_req: unknown, res: { status: (code: number) => { json: (data: unknown) => void } }) => {
+    res.status(200).json({
+      status: 'online',
+      name: 'AsteAI Platform API',
+      version: '1.0.0',
+      message: 'AsteAI REST API is operational. Open the Web Application at http://localhost:3000',
+      links: {
+        webApp: 'http://localhost:3000',
+        swaggerDocs: '/api/docs',
+        healthLive: '/livez',
+        healthReady: '/readyz',
+        auth: `/${API_PREFIX}/auth`,
+      },
+    });
+  };
+
+  const adapter = app.getHttpAdapter();
+  adapter.get('/', (_req: unknown, res: { redirect: (url: string) => void }) => {
+    res.redirect('/api/docs');
+  });
+  adapter.get('/api', apiStatusHandler);
+  adapter.get('/api/', apiStatusHandler);
+  adapter.get('/api/v1', apiStatusHandler);
+  adapter.get('/api/v1/', apiStatusHandler);
+
   await app.listen(port);
-  logger.log(`API running on http://localhost:${port}/${API_PREFIX}`);
+  logger.log('───────────────────────────────────────────────────────');
+  logger.log(`💻 Web Application:    http://localhost:3000`);
+  logger.log(`📡 Swagger API Docs:   http://localhost:${port}/api/docs`);
+  logger.log(`⚙️  API Base URL:       http://localhost:${port}/${API_PREFIX}`);
+  logger.log('───────────────────────────────────────────────────────');
 }
 
 bootstrap().catch((err: unknown) => {

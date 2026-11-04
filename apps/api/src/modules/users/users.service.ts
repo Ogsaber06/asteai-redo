@@ -34,4 +34,40 @@ export class UsersService {
     if (!rows.length) throw new NotFoundException(`User ${id} not found`);
     return mapUserRow(rows[0]);
   }
+
+  async getConsents(userId: string) {
+    const { rows } = await this.db.query(
+      `SELECT * FROM consents WHERE user_id = $1 ORDER BY created_at ASC`,
+      [userId],
+    );
+    return rows;
+  }
+
+  async toggleConsent(userId: string, purpose: string, active: boolean) {
+    const status = active ? 'Active' : 'Revoked';
+    const revokedAt = active ? null : new Date().toISOString();
+    const { rows } = await this.db.query(
+      `INSERT INTO consents (user_id, purpose, status, revoked_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [userId, purpose, status, revokedAt],
+    );
+    return rows[0];
+  }
+
+  async exportData(userId: string) {
+    const [user, consents, apps, passports] = await Promise.all([
+      this.findById(userId),
+      this.getConsents(userId),
+      this.db.query(`SELECT * FROM applications WHERE candidate_id = $1`, [userId]),
+      this.db.query(`SELECT * FROM passports WHERE user_id = $1`, [userId]),
+    ]);
+    return {
+      user,
+      consents,
+      applications: apps.rows,
+      passports: passports.rows,
+      exportedAt: new Date().toISOString(),
+    };
+  }
 }

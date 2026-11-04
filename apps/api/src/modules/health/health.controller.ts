@@ -20,6 +20,21 @@ const DB_CHECK_TIMEOUT_MS = 2_000;
 export class HealthController {
   constructor(@Inject(DB_POOL) private readonly pool: Pool) {}
 
+  @Get()
+  root() {
+    return {
+      status: 'online',
+      name: 'AsteAI Platform API',
+      version: '1.0.0',
+      message: 'AsteAI REST API is running. Open http://localhost:3000 in your browser for the Web UI.',
+      links: {
+        webApp: 'http://localhost:3000',
+        swaggerDocs: '/api/docs',
+        health: '/livez',
+      },
+    };
+  }
+
   @Get('livez')
   @HttpCode(200)
   live() {

@@ -20,12 +20,12 @@ export interface NavItem {
 
 export type NavSection = [group: string, items: NavItem[]];
 
-const item = (slug: string, label: string, ready = false): NavItem => ({ slug, label, ready });
+const item = (slug: string, label: string, ready = true): NavItem => ({ slug, label, ready });
 
 export const NAV: Record<UserRole, NavSection[]> = {
   Employer: [
     ['Hire & ATS', [
-      item('requisitions', 'Requisitions', true),
+      item('requisitions', 'Requisitions'),
       item('pipeline', 'Applications Pipeline'),
       item('interviews', 'Interviews & Offers'),
       item('pools', 'Talent CRM'),
@@ -43,11 +43,11 @@ export const NAV: Record<UserRole, NavSection[]> = {
   ],
   Candidate: [
     ['Careers & AI Prep', [
-      item('applications', 'My Applications', true),
-      item('assess', 'Take Assessment', true),
-      item('passport', 'Talent Passport', true),
-      item('certificates', 'Certificates', true),
-      item('studio', 'AI Interview Studio', true),
+      item('applications', 'My Applications'),
+      item('assess', 'Take Assessment'),
+      item('passport', 'Talent Passport'),
+      item('certificates', 'Certificates'),
+      item('studio', 'AI Interview Studio'),
     ]],
     ['Account', [
       item('privacy', 'Privacy & Consent'),
@@ -60,7 +60,7 @@ export const NAV: Record<UserRole, NavSection[]> = {
       item('proposals', 'My Proposals'),
       item('contracts', 'Escrow Contracts'),
       item('wallet', 'Wallet'),
-      item('passport', 'Talent Passport', true),
+      item('passport', 'Talent Passport'),
     ]],
     ['Account', [
       item('privacy', 'Privacy & Consent'),
@@ -69,7 +69,7 @@ export const NAV: Record<UserRole, NavSection[]> = {
   Buyer: [
     ['Talent Sourcing', [
       item('experts', 'Find Experts'),
-      item('projects', 'My Projects', true),
+      item('projects', 'My Projects'),
       item('services', 'Pre-Packaged Services'),
       item('contracts', 'Escrow Contracts'),
       item('wallet', 'Wallet'),
@@ -81,9 +81,9 @@ export const NAV: Record<UserRole, NavSection[]> = {
   ],
   Admin: [
     ['Master Control', [
-      item('admin', 'Master Control', true),
-      item('ai-interviews', 'AI Interviews', true),
-      item('assessment-sessions', 'Assessment Sessions', true),
+      item('admin', 'Master Control'),
+      item('ai-interviews', 'AI Interviews'),
+      item('assessment-sessions', 'Assessment Sessions'),
       item('tenants', 'Tenants & Plans'),
       item('integrity', 'Integrity Review'),
       item('trust', 'Trust & Safety'),

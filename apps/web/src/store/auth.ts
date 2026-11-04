@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@asteai/types';
+import type { User, UserRole } from '@asteai/types';
 import { api, setSessionExpiredHandler } from '@/lib/api';
 import { tokenStorage } from '@/lib/tokens';
 
@@ -17,11 +17,20 @@ interface LoginResponse {
   user: User;
 }
 
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role?: UserRole;
+}
+
 interface AuthState {
   user: User | null;
   isLoading: boolean;
 
   login: (email: string, password: string) => Promise<User>;
+  register: (payload: RegisterPayload) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearSession: () => void;
@@ -37,6 +46,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const res = await api.post<LoginResponse>('/auth/login', { email, password });
+          tokenStorage.set({ accessToken: res.accessToken, refreshToken: res.refreshToken, userId: res.user.id });
+          set({ user: res.user });
+          return res.user;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      async register(payload) {
+        set({ isLoading: true });
+        try {
+          const res = await api.post<LoginResponse>('/auth/register', payload);
           tokenStorage.set({ accessToken: res.accessToken, refreshToken: res.refreshToken, userId: res.user.id });
           set({ user: res.user });
           return res.user;

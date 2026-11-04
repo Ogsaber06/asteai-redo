@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { Type, plainToInstance } from 'class-transformer';
 import {
   IsIn, IsInt, IsOptional, IsString, IsUrl, Max, Min, MinLength, ValidateIf, validateSync,

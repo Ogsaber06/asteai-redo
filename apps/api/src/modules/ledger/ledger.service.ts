@@ -15,12 +15,20 @@ export class LedgerService {
     return rows;
   }
 
+  async findForUser(userId: string) {
+    const { rows } = await this.db.query(
+      `SELECT * FROM ledger_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [userId],
+    );
+    return rows;
+  }
+
   async getWallet(userId: string) {
     const { rows } = await this.db.query(
       `SELECT
-         SUM(CASE WHEN type = 'Escrow release' THEN amount ELSE 0 END) AS earned,
-         SUM(CASE WHEN type = 'Fee' THEN ABS(amount) ELSE 0 END) AS fees,
-         SUM(CASE WHEN type = 'Escrow hold' THEN ABS(amount) ELSE 0 END) AS pending
+         COALESCE(SUM(CASE WHEN type IN ('Escrow release', 'Deposit') THEN amount ELSE 0 END), 0) AS earned,
+         COALESCE(SUM(CASE WHEN type = 'Fee' THEN ABS(amount) ELSE 0 END), 0) AS fees,
+         COALESCE(SUM(CASE WHEN type = 'Escrow hold' THEN ABS(amount) ELSE 0 END), 0) AS pending
        FROM ledger_entries WHERE user_id = $1`,
       [userId],
     );

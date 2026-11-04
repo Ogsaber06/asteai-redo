@@ -2,33 +2,38 @@
  * UI primitives – small className-based components that map 1:1
  * to the design system CSS variables from the original index.html.
  */
+import React from 'react';
 import { clsx } from 'clsx';
 import styles from './ui.module.css';
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 export function Panel({
-  children, className,
-}: { children: React.ReactNode; className?: string }) {
-  return <div className={clsx(styles.panel, className)}>{children}</div>;
+  children, className, style,
+}: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  return <div style={style} className={clsx(styles.panel, className)}>{children}</div>;
 }
 
 // ── Button ───────────────────────────────────────────────────────────────────
 type BtnVariant = 'default' | 'primary' | 'mint' | 'rose' | 'sm';
 
 export function Button({
-  children, variant = 'default', disabled, onClick, type = 'button', className,
+  children, variant = 'default', variantSize, disabled, onClick, type = 'button', className, style,
 }: {
   children: React.ReactNode;
   variant?: BtnVariant | BtnVariant[];
+  variantSize?: string;
   disabled?: boolean;
   onClick?: () => void;
   type?: 'button' | 'submit' | 'reset';
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const variants = Array.isArray(variant) ? variant : [variant];
+  const isSm = variants.includes('sm') || variantSize === 'sm';
   return (
     <button
       type={type}
+      style={style}
       disabled={disabled}
       onClick={onClick}
       className={clsx(
@@ -36,7 +41,7 @@ export function Button({
         variants.includes('primary') && styles.pri,
         variants.includes('mint')    && styles.mint,
         variants.includes('rose')    && styles.rose,
-        variants.includes('sm')      && styles.sm,
+        isSm                         && styles.sm,
         className,
       )}
     >

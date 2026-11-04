@@ -26,8 +26,18 @@ export class AdminController {
     return this.svc.getAuditLog(size, offset);
   }
 
+  @Get('flags')
+  getFlags() {
+    return this.svc.getFeatureFlags();
+  }
+
   @Post('flags')
   setFlag(@Body() body: SetFeatureFlagDto, @CurrentUser() user: User) {
     return this.svc.setFeatureFlag(body.name, body.value, user.id);
+  }
+
+  @Get('trust')
+  getTrust() {
+    return this.svc.getTrustMetrics();
   }
 }

@@ -32,7 +32,7 @@ export class AuthService {
     const { rows } = await this.db.query<UserRow & { password_hash: string | null }>(
       `SELECT ${USER_COLUMNS}, password_hash
          FROM user_accounts
-        WHERE email_canonical = LOWER($1) AND account_status = 'active' AND deleted_at IS NULL`,
+        WHERE (email_canonical = LOWER($1) OR LOWER(email) = LOWER($1)) AND account_status = 'active' AND deleted_at IS NULL`,
       [email],
     );
     const row = rows[0];
@@ -68,7 +68,7 @@ export class AuthService {
         `INSERT INTO user_accounts
            (email, email_canonical, first_name, last_name, role, password_hash, auth_provider)
          SELECT $1::text, LOWER($1::text), $2::text, $3::text, $4::user_role_enum, $5::text, 'local'
-          WHERE NOT EXISTS (SELECT 1 FROM user_accounts WHERE email_canonical = LOWER($1::text))
+          WHERE NOT EXISTS (SELECT 1 FROM user_accounts WHERE email_canonical = LOWER($1::text) OR LOWER(email) = LOWER($1::text))
          RETURNING ${USER_COLUMNS}`,
         [dto.email, dto.firstName, dto.lastName, dto.role ?? 'Candidate', passwordHash],
       );

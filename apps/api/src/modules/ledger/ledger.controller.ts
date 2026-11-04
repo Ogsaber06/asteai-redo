@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { LedgerService } from './ledger.service';
@@ -24,8 +24,25 @@ export class LedgerController {
   }
 
   @Get('wallet')
-  @Roles('Freelancer')
+  @Roles('Freelancer', 'Buyer', 'Admin')
   wallet(@CurrentUser() user: User) {
     return this.svc.getWallet(user.id);
+  }
+
+  @Get('entries')
+  userEntries(@CurrentUser() user: User) {
+    return this.svc.findForUser(user.id);
+  }
+
+  @Post('deposit')
+  deposit(@CurrentUser() user: User, @Body() body: { amount: number; description?: string }) {
+    return this.svc.record({
+      userId: user.id,
+      tenantId: user.tenantId ?? undefined,
+      type: 'Deposit',
+      description: body.description ?? 'Wallet deposit',
+      amount: Math.abs(body.amount),
+      by: `${user.firstName} ${user.lastName}`,
+    });
   }
 }
