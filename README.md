@@ -40,6 +40,16 @@ Employer · Candidate · Freelancer · Buyer · Admin
 
 ## Voice control
 
+### GitHub Pages preview
+
+Open **Voice Assistant**, then select **Start listening**. Try “take me to the
+pipeline”, “I want to post a job”, or “set title to Data Analyst”. Say “show
+controls” to get a numbered list. The assistant asks for confirmation before
+actions such as creating or publishing a requisition. Turn on **Speak replies**
+for spoken prompts. The command box works with or without microphone access.
+
+### Next.js app
+
 Open **Voice control** on any page and select **Start listening**. Say
 “read controls” to hear the available names and numbers, “set language to
 English” to fill a field, or “activate number 4” followed by “confirm” to
