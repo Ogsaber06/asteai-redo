@@ -10,6 +10,7 @@ const confirmationTime = 30_000;
 
 export function VoiceControl() {
   const [open, setOpen] = useState(false);
+  const [speakReplies, setSpeakReplies] = useState(false);
   const [input, setInput] = useState('');
   const [notice, setNotice] = useState('Say or type “show controls” to get started.');
   const [controls, setControls] = useState<Control[]>([]);
@@ -35,7 +36,7 @@ export function VoiceControl() {
     const command = parseCommand(transcript);
     const respond = (message: string) => {
       setNotice(message);
-      if (spoken) speech.speak(message);
+      if (spoken && speakReplies) speech.speak(message);
     };
 
     if (command.type === 'confirm') {
@@ -48,8 +49,8 @@ export function VoiceControl() {
           window.location.href !== action.url) {
         return respond('That control changed. Ask for it again.');
       }
+      respond(`Activated ${current.label}.`);
       current.element.click();
-      setNotice(`Activated ${current.label}.`);
       return;
     }
 
@@ -62,7 +63,7 @@ export function VoiceControl() {
         return;
       case 'help':
         setControls(scan());
-        return respond('Say “read controls” for names and numbers, then “activate” and a control number. To fill a field, say “set” and the field name, followed by “to” and the value.');
+        return respond('Try “take me to my applications” or “set language to English”. Say “read controls” to hear what you can use on this page.');
       case 'readControls': {
         const current = scan();
         setControls(current);
@@ -99,12 +100,20 @@ export function VoiceControl() {
 
     const current = scan();
     setControls(current);
-    const matches = findControl(current, command.target);
+    const matches = findControl(current, command.target, command.type === 'navigate');
     if (matches.length === 0) return respond('That control is unavailable. Try “read controls”.');
     if (matches.length > 1) return respond(`More than one control matches. Use number ${matches.map(control => control.id).join(' or ')}.`);
     const [control] = matches;
 
-    if (command.type === 'activate') {
+    if (command.type === 'navigate' && control.element instanceof HTMLAnchorElement &&
+        control.destination && new URL(control.destination).origin === window.location.origin &&
+        (!control.element.target || control.element.target === '_self') && !control.element.hasAttribute('download')) {
+      respond(`Opening ${control.label}.`);
+      control.element.click();
+      return;
+    }
+
+    if (command.type === 'activate' || command.type === 'navigate') {
       if (control.kind !== 'action') {
         control.element.focus();
         return respond(`Focused ${control.label}. Say “set” followed by the field name, “to”, and the value.`);
@@ -211,12 +220,15 @@ export function VoiceControl() {
       </button>
       <div id="asteai-voice-panel" className={styles.panel} hidden={!open}>
         <p>Your browser may send audio to its speech service. Speak or type commands in English.</p>
-        <button type="button" onClick={speech.enabled ? () => run('stop listening') : speech.start} disabled={!speech.supported}>
-          {speech.enabled ? 'Stop listening' : 'Start listening'}
-        </button>
+        <div className={styles.options}>
+          <button type="button" onClick={speech.enabled ? () => run('stop listening') : speech.start} disabled={!speech.supported}>
+            {speech.enabled ? 'Stop listening' : 'Start listening'}
+          </button>
+          <label><input type="checkbox" checked={speakReplies} onChange={event => setSpeakReplies(event.target.checked)} /> Speak replies</label>
+        </div>
         {!speech.supported && <p>Speech recognition is unavailable here. You can still type commands.</p>}
         <form className={styles.form} onSubmit={submit}>
-          <input aria-label="Type a voice command" placeholder="e.g. show controls" autoComplete="off"
+          <input aria-label="Type a voice command" placeholder="e.g. open interview studio" autoComplete="off"
             value={input} onChange={event => setInput(event.target.value)} />
           <button type="submit">Run</button>
         </form>
@@ -233,7 +245,7 @@ export function VoiceControl() {
         </details>
         <details>
           <summary>Command examples</summary>
-          <p>“Activate number 4”, “set email to …”, “choices for language”, “read page”, “scroll down”, “go back”, “stop listening”.</p>
+          <p>“Take me to my applications”, “change language to English”, “activate number 4”, “read page”, “go back”, “stop listening”.</p>
         </details>
       </div>
     </aside>

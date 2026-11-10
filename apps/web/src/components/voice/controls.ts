@@ -1,6 +1,13 @@
 const selector = 'a[href], button, input, select, textarea, summary, [role="button"], [role="link"], [role="switch"], [role="radio"], [role="checkbox"], [role="tab"]';
 const textTypes = new Set(['text', 'search', 'email', 'tel', 'url', 'number', 'date', 'time', 'datetime-local', 'month', 'week', 'range']);
 const protectedAutocomplete = /(?:^|\s)(?:current-password|new-password|one-time-code|cc-\S+|transaction-\S+|webauthn)(?:\s|$)/i;
+const destinationNames = new Map([
+  ['applications', 'my applications'],
+  ['interview studio', 'ai interview studio'],
+  ['studio', 'ai interview studio'],
+  ['passport', 'talent passport'],
+  ['projects', 'my projects'],
+]);
 
 export type Control = {
   id: number;
@@ -72,36 +79,51 @@ function spokenNumber(value: string) {
   return decade >= 2 && digit >= 0 && digit <= 9 && !extra ? decade * 10 + digit : null;
 }
 
-export function findControl(controls: Control[], target: string) {
+export function findControl(controls: Control[], target: string, navigation = false) {
   const name = normalize(target);
   const number = /^(?:number|control) (.+)$/.exec(name);
   if (number) return controls.filter(control => control.id === spokenNumber(number[1]));
   const named = controls.filter(control => normalize(control.label) === name);
-  return named.length ? named : controls.filter(control => control.id === spokenNumber(name));
+  if (named.length) return named;
+  const alias = navigation ? destinationNames.get(name.replace(/^the /, '')) : undefined;
+  if (alias) return controls.filter(control => control.destination && normalize(control.label) === alias);
+  return controls.filter(control => control.id === spokenNumber(name));
 }
 
 export function parseCommand(transcript: string) {
-  const text = transcript.trim();
+  const text = transcript.trim()
+    .replace(/^hey aste\s*ai[\s,]+/i, '')
+    .replace(/^(?:can you|could you|i want to|i need to)\s+/i, '')
+    .replace(/^please[,\s]+/i, '');
   const simple = normalize(text);
   switch (simple) {
+    case 'yes do it':
     case 'confirm': return { type: 'confirm' } as const;
+    case 'never mind':
     case 'cancel': return { type: 'cancel' } as const;
+    case 'turn off the microphone':
     case 'stop listening': return { type: 'stop' } as const;
+    case 'what can you do':
     case 'show controls':
     case 'help': return { type: 'help' } as const;
     case 'read controls': return { type: 'readControls' } as const;
+    case 'read this':
     case 'read page': return { type: 'readPage' } as const;
     case 'scroll up': return { type: 'scroll', direction: -1 } as const;
     case 'scroll down': return { type: 'scroll', direction: 1 } as const;
     case 'back':
     case 'go back': return { type: 'back' } as const;
   }
-  const set = /^(?:set|choose)\s+(.+?)\s+to\s+([\s\S]+)$/i.exec(text);
+  const set = /^(?:set|change|choose|fill)\s+(.+?)\s+(?:to|with)\s+([\s\S]+)$/i.exec(text);
   if (set) return { type: 'set', target: set[1], value: set[2] } as const;
-  const action = /^(activate|click|open|go to|focus|clear|choices for)\s+(.+)$/i.exec(text);
+  const action = /^(activate|click|select|press|open|go to|take me to|show me|focus|clear|choices for)\s+(.+)$/i.exec(text);
   if (!action) return { type: 'unknown' } as const;
   const target = action[2];
   switch (action[1].toLowerCase()) {
+    case 'open':
+    case 'go to':
+    case 'take me to':
+    case 'show me': return { type: 'navigate', target } as const;
     case 'focus': return { type: 'focus', target } as const;
     case 'clear': return { type: 'set', target, value: '' } as const;
     case 'choices for': return { type: 'choices', target } as const;
@@ -126,9 +148,11 @@ export function prepareValue(control: Control, text: string): string | null {
   if (element instanceof HTMLInputElement) {
     const probe = element.cloneNode() as HTMLInputElement;
     const number = ['number', 'range'].includes(element.type) ? spokenNumber(normalize(text)) : null;
-    const value = number === null || /^[-+]/.test(text) ? text : String(number);
+    const email = element.type === 'email' && !text.includes('@') && /\s+at\s+/i.test(text)
+      ? text.replace(/\s+at\s+/i, '@').replace(/\s+dot\s+/gi, '.') : text;
+    const value = number === null || /^[-+]/.test(text) ? email : String(number);
     probe.value = value;
-    if (probe.value !== value || (value && (probe.validity.rangeOverflow || probe.validity.rangeUnderflow))) return null;
+    if (probe.value !== value || (value && !probe.validity.valid)) return null;
     return value;
   }
   return text;
