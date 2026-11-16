@@ -65,3 +65,48 @@ export interface StatementOfWork {
   outOfScope: string[];
   revisionRounds: number;
 }
+
+// ── Deliverable files ──
+
+export const DELIVERABLE_MAX_BYTES = 50 * 1024 * 1024;
+
+/** Accepted deliverable types (extension → MIME). Anything executable is refused. */
+export const DELIVERABLE_TYPES: Record<string, string> = {
+  pdf: 'application/pdf',
+  zip: 'application/zip',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  md: 'text/markdown',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  mp4: 'video/mp4',
+  fig: 'application/octet-stream',
+};
+
+export interface DeliverableFile {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  milestoneId: string | null;
+  orderId: string | null;
+  uploadedBy: string;
+  createdAt: string;
+  /** GET this (signed-in, a party to the work) to download. */
+  downloadPath: string;
+}
+
+/** POST /deliverables/upload-url */
+export interface DeliverableUploadTicket {
+  file: DeliverableFile;
+  url: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+  expiresInSeconds: number;
+}

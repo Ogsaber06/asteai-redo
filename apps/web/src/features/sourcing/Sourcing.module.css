@@ -1,0 +1,79 @@
+/* Sourcing workspace (/platform/sourcing/*). Safe down to 360px wide. */
+
+.page { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.between { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; min-width: 0; }
+.h2 { font-size: 1rem; font-weight: 700; margin: 0; color: var(--fg); }
+.h3 { font-size: .88rem; font-weight: 600; margin: 0; color: var(--fg); }
+.muted { color: var(--fg-3); font-size: .82rem; margin: 0; }
+.error { color: var(--rose); font-size: .85rem; margin: 0; }
+.ok { color: var(--mint); font-size: .85rem; margin: 0; }
+.link { color: var(--blue-2); font-weight: 600; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.mono { font-family: var(--font-mono); }
+
+.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.tab { padding: 9px 12px; border-bottom: 2px solid transparent; color: var(--fg-2); font-size: .88rem; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.tab:hover { color: var(--fg); }
+.tabActive { color: var(--fg); border-bottom-color: var(--blue); }
+
+/* AI search */
+.searchBar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+@media (max-width: 560px) { .searchBar { grid-template-columns: minmax(0, 1fr) auto; } .searchBar > :last-child { grid-column: 1 / -1; } }
+.input, .select, .textarea {
+  width: 100%; min-width: 0; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg); color: var(--fg);
+  padding: 10px 12px; font: inherit; font-size: .92rem;
+}
+.textarea { min-height: 90px; resize: vertical; }
+.mic {
+  width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--bg); color: var(--fg);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mic:hover { border-color: var(--blue); }
+.micOn { background: var(--rose); border-color: var(--rose); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { .micOn { animation: none; } }
+.cost {
+  display: inline-flex; gap: 6px; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600;
+  background: var(--bg-3); border: 1px solid var(--line-2); color: var(--fg-2);
+}
+.costLow { border-color: var(--rose); color: var(--rose); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 3px 9px; border-radius: 999px; background: var(--bg-3); border: 1px solid var(--line-2); font-size: .78rem; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.result { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); min-width: 0; }
+.fit { font-family: var(--font-mono); font-weight: 700; font-size: 1.2rem; }
+.reasons { margin: 0; padding-left: 16px; font-size: .8rem; color: var(--fg-2); }
+
+/* Orders & files */
+.drop { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px; border: 2px dashed var(--line-2); border-radius: 12px; text-align: center; }
+.dropActive { border-color: var(--blue); background: var(--bg-3); }
+.progress { width: 100%; height: 6px; border-radius: 999px; background: var(--bg-3); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--blue); }
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.file { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: .86rem; }
+.log { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.log li { position: relative; display: flex; flex-direction: column; gap: 2px; }
+.log li::before { content: ''; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); border: 2px solid var(--blue); }
+.logDetail { margin: 0; white-space: pre-wrap; font-size: .82rem; color: var(--fg-2); overflow-wrap: anywhere; }
+
+/* Escrow tracker */
+.escrowBar { height: 10px; border-radius: 999px; background: var(--bg-3); overflow: hidden; display: flex; }
+.escrowBar > span { display: block; height: 100%; }
+.barReleased { background: var(--mint); }
+.barHeld { background: var(--blue); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .78rem; color: var(--fg-3); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.milestones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.milestone { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.step { height: 6px; border-radius: 3px; background: var(--bg-3); }
+.stepDone { background: var(--mint); }
+.stepLabels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: .72rem; color: var(--fg-3); }
+.table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.table th, .table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.table th { font-size: .74rem; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-3); }
+.tableWrap { overflow-x: auto; }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); text-decoration: none; color: inherit; }
+.card:hover { border-color: var(--blue); }

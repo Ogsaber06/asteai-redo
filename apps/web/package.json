@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"src/**/*.spec.ts\""
+    "test": "node --import tsx --test \"src/**/*.spec.ts\"",
+    "test:a11y": "playwright test"
   },
   "dependencies": {
     "@asteai/types": "workspace:*",
@@ -22,11 +23,14 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "^20.14.11",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.5",
+    "playwright-core": "1.63.0",
     "tsx": "^4",
     "typescript": "^5.4.5"
   }

@@ -22,4 +22,9 @@ export const contractsApi = {
     api.post<Contract>(ms(id, mid, 'request-revision'), { note }),
   accept: (id: string, mid: string) => api.post<Contract>(ms(id, mid, 'accept')),
   release: (id: string, mid: string) => api.post<Contract>(ms(id, mid, 'release')),
+  /** Buyer: approve a submitted deliverable and release its escrow in one step. */
+  approveRelease: (id: string, mid: string) => api.post<Contract>(ms(id, mid, 'approve-release')),
+  /** Buyer or expert: dispute a milestone that holds escrow (freezes the contract). */
+  dispute: (id: string, mid: string, body: { reasonCode: string; description: string; amountInDispute?: number }) =>
+    api.post<{ id: string }>(ms(id, mid, 'dispute'), body),
 };

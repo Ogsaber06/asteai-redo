@@ -259,15 +259,12 @@
   font-weight: 700;
 }
 .meters { display: grid; gap: 12px; margin: 0; }
-.meter { display: grid; gap: 6px; }
-.meterHead {
-  display: flex;
-  justify-content: space-between;
-  font-size: .86rem;
-  color: var(--fg-2);
-}
-.meterHead dd { margin: 0; font-family: var(--font-mono); color: var(--fg); }
+.meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: baseline; }
+.meterLabel { font-size: .86rem; color: var(--fg-2); }
+.meterValue { margin: 0; font-size: .86rem; font-family: var(--font-mono); color: var(--fg); }
 .meterTrack {
+  grid-column: 1 / -1;
+  margin: 0;
   height: 6px;
   border-radius: 999px;
   background: var(--line-2);

@@ -75,16 +75,20 @@ const costRupees = (c: CreditCost) =>
 
 export default async function PricingPage({ searchParams }: { searchParams: SearchParams }) {
   const audience = audienceOf(searchParams);
-  let plans: Plan[] | null = null;
-  let credits: PublicCreditSettings | null = null;
-  try {
-    [plans, credits] = await Promise.all([
-      serverGet<Plan[]>('/plans', { params: { audience }, revalidate: 300 }),
-      serverGet<PublicCreditSettings>('/public-settings/credits', { revalidate: 300 }),
-    ]);
-  } catch (err) {
-    if (!(err instanceof ApiUnavailable || err instanceof ApiNotFound)) throw err;
-  }
+  // Each read falls back on its own (plans can show without the cost table and vice versa).
+  // Both settle before rendering: a still-pending rejected fetch would otherwise break the
+  // streamed response when the API is down.
+  const [plansRes, creditsRes] = await Promise.allSettled([
+    serverGet<Plan[]>('/plans', { params: { audience }, revalidate: 300 }),
+    serverGet<PublicCreditSettings>('/public-settings/credits', { revalidate: 300 }),
+  ]);
+  const settled = <T,>(r: PromiseSettledResult<T>): T | null => {
+    if (r.status === 'fulfilled') return r.value;
+    if (r.reason instanceof ApiUnavailable || r.reason instanceof ApiNotFound) return null;
+    throw r.reason;
+  };
+  const plans = settled(plansRes);
+  const credits = settled(creditsRes);
   const shown = plans ?? (audience === 'individual' ? FALLBACK_PLANS : []);
   const costs = credits?.costs ?? FALLBACK_COSTS;
   const employer = audience === 'employer';

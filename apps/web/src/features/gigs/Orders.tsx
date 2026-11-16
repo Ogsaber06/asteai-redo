@@ -1,5 +1,6 @@
 'use client';
 
+import { DEFAULT_GIG_ROUTES, type GigRoutes } from './Catalogue';
 import { useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -14,7 +15,7 @@ import styles from './Gigs.module.css';
 type Filter = GigOrderStatus | 'all';
 
 /** /platform/orders: the orders the signed-in user placed or fulfils (admins: all). */
-export function OrdersList() {
+export function OrdersList({ routes = DEFAULT_GIG_ROUTES }: { routes?: GigRoutes } = {}) {
   const user = useAuthStore((s) => s.user);
   const [filter, setFilter] = useState<Filter>('all');
   const key = filter === 'all' ? '/orders' : `/orders?status=${encodeURIComponent(filter)}`;
@@ -38,7 +39,7 @@ export function OrdersList() {
       {data && data.length === 0 && <Empty message={filter === 'all' ? 'No orders yet.' : 'No orders with this status.'} />}
       <div className={styles.stack}>
         {data?.map((o) => (
-          <Link key={o.id} href={`/platform/orders/${encodeURIComponent(o.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link key={o.id} href={`${routes.orders}/${encodeURIComponent(o.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <Panel className={styles.stack}>
               <div className={styles.between}>
                 <span className={styles.h2}>{o.serviceTitle}</span>
@@ -63,7 +64,7 @@ export function OrdersList() {
 }
 
 /** /platform/orders/[id]: timeline, delivery history and the actions for the caller's side. */
-export function OrderDetail({ id }: { id: string }) {
+export function OrderDetail({ id, routes = DEFAULT_GIG_ROUTES, children }: { id: string; routes?: GigRoutes; children?: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const { data: order, error, isLoading, mutate } = useSWR<GigOrder>(orderKey(id), fetcher);
   if (isLoading) return <Empty message="Loading order…" />;
@@ -71,7 +72,7 @@ export function OrderDetail({ id }: { id: string }) {
 
   const side = user?.id === order.buyerId ? 'buyer' : user?.id === order.expertId ? 'expert' : user?.role === 'Admin' ? 'admin' : null;
   const done = (next?: GigOrder) => { void mutate(next, { revalidate: true }); };
-  const contractHref = order.contractId ? `/platform/contracts/${encodeURIComponent(order.contractId)}` : null;
+  const contractHref = order.contractId ? `${routes.contracts}/${encodeURIComponent(order.contractId)}` : null;
   const revisionsLeft = Math.max(0, order.revisions - order.revisionsUsed);
 
   return (
@@ -80,7 +81,7 @@ export function OrderDetail({ id }: { id: string }) {
         eyebrow="Order"
         title={order.serviceTitle}
         sub={<span className={styles.mono}>{order.id}</span>}
-        actions={<Link href="/platform/orders">All orders</Link>}
+        actions={<Link href={routes.orders}>All orders</Link>}
       />
 
       <Panel className={styles.stack}>
@@ -123,6 +124,9 @@ export function OrderDetail({ id }: { id: string }) {
         <h2 className={styles.h2}>Requirements</h2>
         <p className={styles.note}>{order.requirements}</p>
       </Panel>
+
+      {/* Extra panels from the page (e.g. deliverable files and the work log in the sourcing workspace). */}
+      {children}
 
       {order.deliveries && order.deliveries.length > 0 && (
         <Panel className={styles.stack}>
