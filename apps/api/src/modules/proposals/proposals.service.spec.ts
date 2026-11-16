@@ -21,7 +21,7 @@ function fakePool(replies: { rows: unknown[] }[]) {
 const buyer = { id: 'buyer-1', role: 'Buyer' } as User;
 const proposal = { id: 'P-1', project_id: 'PRJ-1', expert_id: 'fl-1', status: 'Pending' };
 const row = (over: Record<string, unknown> = {}) => ({
-  id: 'P-1', project_id: 'PRJ-1', expert_id: 'fl-1', price: '45000.50', days: 10, note: null, status: 'Pending',
+  id: 'P-1', project_id: 'PRJ-1', expert_id: 'fl-1', price: '45000.50', days: 10, note: null, status: 'Pending', sow: null,
   created_at: new Date('2026-01-02T03:04:05Z'), updated_at: new Date('2026-01-02T03:04:05Z'), ...over,
 });
 

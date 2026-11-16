@@ -8,7 +8,10 @@ import { execute, needsConfirmation } from './execute';
 import { confirmationReply, matchLocally } from './localIntent';
 import { pageTargets, type RegisteredTarget } from './registry';
 import { routeTargets } from './routeTargets';
-import { isSpeechSupported, listenOnce, speak, stopSpeaking, type Listening } from './speech';
+import {
+  isNaturalVoiceAvailable, isSpeechOutputSupported, isSpeechSupported, listenOnce, speak, stopSpeaking,
+  type Listening, type SpeechOutputMode,
+} from './speech';
 import styles from './VoiceAssistant.module.css';
 
 type Phase = 'idle' | 'listening' | 'thinking' | 'confirm';
@@ -43,6 +46,10 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
   const [typed, setTyped] = useState('');
   const [pending, setPending] = useState<{ cmd: VoiceCommandResult; targets: RegisteredTarget[] } | null>(null);
   const [speechOk, setSpeechOk] = useState(false);
+  const [speechOutputOk, setSpeechOutputOk] = useState(false);
+  const [naturalVoiceAvailable, setNaturalVoiceAvailable] = useState(false);
+  const [useNaturalVoice, setUseNaturalVoice] = useState(false);
+  const [outputMode, setOutputMode] = useState<SpeechOutputMode>(null);
   const [useText, setUseText] = useState(false);
   const listening = useRef<Listening | null>(null);
   const request = useRef<AbortController | null>(null);
@@ -50,7 +57,17 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
   const clarification = useRef<VoiceCommandRequest['clarification']>();
   const lang = typeof navigator !== 'undefined' ? navigator.language : 'en';
 
-  useEffect(() => setSpeechOk(isSpeechSupported()), []);
+  useEffect(() => {
+    setSpeechOk(isSpeechSupported());
+    setSpeechOutputOk(isSpeechOutputSupported());
+    let active = true;
+    void isNaturalVoiceAvailable().then((available) => {
+      if (!active) return;
+      setNaturalVoiceAvailable(available);
+      setUseNaturalVoice(available);
+    });
+    return () => { active = false; };
+  }, []);
 
   // Leaving the page (or entering a voice-off page) must release the microphone.
   useEffect(() => {
@@ -66,8 +83,11 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
 
   const say = useCallback((text: string) => {
     setReply(text);
-    speak(text, lang);
-  }, [lang]);
+    setOutputMode(null);
+    void speak(text, lang, useNaturalVoice).then((mode) => {
+      if (mounted.current && mode) setOutputMode(mode);
+    });
+  }, [lang, useNaturalVoice]);
 
   const run = useCallback(async (cmd: VoiceCommandResult, targets: RegisteredTarget[]) => {
     try {
@@ -210,11 +230,14 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
   };
 
   return (
-    <div className={styles.dock}>
+    <div className={styles.dock} data-testid="voice-assistant-dock">
       <div className={styles.status} aria-live="polite">
         {heard && <p className={styles.heard}>“{heard}”</p>}
         {phase === 'thinking' && <p className={styles.reply}>Working…</p>}
         {reply && phase !== 'thinking' && <p className={styles.reply}>{reply}</p>}
+        {reply && speechOutputOk && outputMode && (
+          <small className={styles.voiceSource}>{outputMode === 'natural' ? 'Natural voice' : 'On-device voice'}</small>
+        )}
         {phase === 'confirm' && (
           <div className={styles.actions}>
             <button type="button" className={styles.confirm} onClick={confirm}>Confirm</button>
@@ -257,6 +280,18 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
       {speechOk && (
         <button type="button" className={styles.cancel} disabled={phase !== 'idle'} onClick={() => setUseText(!useText)}>
           {useText ? 'Use microphone' : 'Type instead'}
+        </button>
+      )}
+      {speechOutputOk && naturalVoiceAvailable && (
+        <button
+          type="button"
+          className={styles.voiceMode}
+          disabled={phase === 'thinking'}
+          aria-pressed={useNaturalVoice}
+          title="Natural voice sends short assistant replies to the configured speech service; on-device voice stays on this device."
+          onClick={() => setUseNaturalVoice((current) => !current)}
+        >
+          {useNaturalVoice ? 'Use on-device voice' : 'Use natural voice'}
         </button>
       )}
     </div>

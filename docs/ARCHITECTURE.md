@@ -353,6 +353,7 @@ mkdir apps/api/src/modules/<name>
 | Group | Variables |
 |-------|-----------|
 | Database (required) | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD` or `DATABASE_IAM_AUTH=true` + `AWS_REGION`, `DATABASE_SSL`, `DATABASE_SSL_REJECT_UNAUTHORIZED`, `DATABASE_MAX_POOL`, `DATABASE_IDLE_TIMEOUT_MS` |
+| Voice output (optional) | `VOICE_TTS_ENABLED=false` by default. When enabled, the authenticated API prefers Amazon Polly generative voices (`VOICE_TTS_ENGINE=generative`, the default), then falls back to neural voices for supported locales/regions; use `VOICE_TTS_ENGINE=neural` to skip Generative. Grant the API runtime `polly:DescribeVoices` and `polly:SynthesizeSpeech` in `AWS_REGION`. Only short assistant reply text is sent for synthesis. If disabled or unavailable, the browser uses its best matching on-device voice. |
 | Migrations | `migrate.mjs` (run first by `bun run start`) uses the database settings above, or `DATABASE_URL` if set. `DATABASE_MIGRATION_USER` / `DATABASE_MIGRATION_PASSWORD` let it connect as the master user while the app keeps its DML-only user. |
 | Auth (required) | `JWT_SECRET` (64+ chars), `JWT_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `COOKIE_SECURE`, `COOKIE_DOMAIN`, `TOTP_ENCRYPTION_KEY`, `TRUST_PROXY`, `CORS_ORIGINS` |
 | OAuth | `OAUTH_CALLBACK_BASE_URL`, `WEB_APP_URL`, `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` |

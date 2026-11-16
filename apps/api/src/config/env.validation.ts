@@ -43,10 +43,15 @@ class EnvironmentVariables {
   @IsString() @MinLength(1, { message: 'DATABASE_PASSWORD is required unless DATABASE_IAM_AUTH=true' })
   DATABASE_PASSWORD?: string;
 
-  /** Signs IAM auth tokens and is the SES region. */
-  @ValidateIf((env: EnvironmentVariables) => env.DATABASE_IAM_AUTH === 'true' || env.EMAIL_TRANSPORT === 'ses')
-  @IsString({ message: 'AWS_REGION is required when DATABASE_IAM_AUTH=true or EMAIL_TRANSPORT=ses' })
+  /** Signs IAM auth tokens and is used by SES and optional speech synthesis. */
+  @ValidateIf((env: EnvironmentVariables) => env.DATABASE_IAM_AUTH === 'true' || env.EMAIL_TRANSPORT === 'ses' || env.VOICE_TTS_ENABLED === 'true')
+  @IsString({ message: 'AWS_REGION is required when DATABASE_IAM_AUTH=true, EMAIL_TRANSPORT=ses, or VOICE_TTS_ENABLED=true' })
   AWS_REGION?: string;
+
+  /** Optional Polly speech synthesis; disabled by default to avoid unexpected data transfer or usage charges. */
+  @IsOptional() @IsIn(['true', 'false']) VOICE_TTS_ENABLED?: string;
+  /** Prefer generative (more expressive) voices or neural voices when synthesis is enabled. */
+  @IsOptional() @IsIn(['generative', 'neural']) VOICE_TTS_ENGINE?: string;
 
   // ── Email ──
   @IsOptional() @IsIn(['ses', 'log']) EMAIL_TRANSPORT?: string;

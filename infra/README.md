@@ -15,6 +15,18 @@ OpenTofu config that provisions and fully initialises the AsteAI PostgreSQL data
 | `aws_iam_instance_profile` | For EC2 / ECS task attachment |
 | `null_resource` (local-exec) | Runs `001_initial_schema.sql`, creates `asteai_app` user with `rds_iam` |
 
+## Optional natural voice output
+
+The API uses the user's browser voice by default. Polly voice output is opt-in: set
+`VOICE_TTS_ENABLED=true` on the API and grant its runtime role `polly:DescribeVoices`
+and `polly:SynthesizeSpeech` in the configured `AWS_REGION`. Generative voices are
+preferred for a more expressive sound, with a neural voice fallback when that engine or
+locale is unavailable. For example, `ap-south-1` supports Neural but not Generative. Set
+`VOICE_TTS_ENGINE=neural` to avoid trying Generative. This RDS-focused Terraform module
+does not grant those Polly permissions. Leave the flag unset or `false` until the runtime
+role and usage budget are approved. When enabled, only short assistant replies are sent
+to Polly; microphone recordings are not sent through this endpoint or stored by it.
+
 ## Prerequisites
 
 - OpenTofu >= 1.6

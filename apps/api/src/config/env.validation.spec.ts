@@ -36,6 +36,15 @@ describe('validateEnv', () => {
     assert.doesNotThrow(() => validateEnv({ ...iam, AWS_REGION: 'ap-south-1' }));
   });
 
+  it('requires an AWS region only when speech synthesis is enabled', () => {
+    assert.doesNotThrow(() => validateEnv({ ...base, VOICE_TTS_ENABLED: 'false' }));
+    assert.throws(() => validateEnv({ ...base, VOICE_TTS_ENABLED: 'true' }), /AWS_REGION/);
+    assert.doesNotThrow(() => validateEnv({ ...base, VOICE_TTS_ENABLED: 'true', AWS_REGION: 'ap-south-1' }));
+    assert.throws(() => validateEnv({ ...base, VOICE_TTS_ENABLED: 'sometimes' }), /VOICE_TTS_ENABLED/);
+    assert.doesNotThrow(() => validateEnv({ ...base, VOICE_TTS_ENGINE: 'generative' }));
+    assert.throws(() => validateEnv({ ...base, VOICE_TTS_ENGINE: 'standard' }), /VOICE_TTS_ENGINE/);
+  });
+
   it('accepts TRUST_PROXY hop counts 0-10 only', () => {
     for (const ok of ['0', '1', '10']) assert.doesNotThrow(() => validateEnv({ ...base, TRUST_PROXY: ok }), ok);
     for (const bad of ['-1', '11', '1.5', 'true', 'loopback']) {
