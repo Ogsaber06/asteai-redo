@@ -47,6 +47,12 @@ const result = (r: Partial<VoiceCommandResult> & Pick<VoiceCommandResult, 'kind'
 export function matchLocally(utterance: string, targets: VoiceTarget[], followUp = false): VoiceCommandResult | null {
   const text = utterance.trim().replace(/^(?:(?:hey aste\s*ai|please|can you|could you|i want to|i need to)[,\s]+)+/i, '');
   const u = norm(text);
+  if (/^(?:what can you do|what can you help me with|how can you help me|how do i use (?:you|the voice assistant)|what can i say)$/.test(u)) {
+    return result({
+      kind: 'answer',
+      speech: 'I can open sections available to your role, fill labeled fields, and trigger visible controls. I will ask you to confirm before pressing a button that may change data.',
+    });
+  }
   if (/^(go )?back$/.test(u)) return result({ kind: 'back', speech: 'Going back.' });
   const support = targets.find((target) => target.id === 'route:support' && target.kind === 'route');
   if (support && /^(?:i (?:am|m) (?:stuck|frustrated)|this is (?:frustrating|not working)|nothing (?:is working|works))$/.test(u)) {
@@ -66,9 +72,27 @@ export function matchLocally(utterance: string, targets: VoiceTarget[], followUp
   const fill = /^(?:set|change|fill|choose)\s+(.+?)\s+(?:to|with)\s+([\s\S]+)$/i.exec(text);
   if (fill) {
     const hits = targets.filter((t) => t.kind === 'field' && bare(t.label) === bare(fill[1]));
-    if (hits.length !== 1) return null;
+    if (hits.length !== 1) {
+      return result({
+        kind: 'clarify',
+        speech: hits.length
+          ? `I found more than one field named ${fill[1]}. Which one do you mean?`
+          : `I can't find a visible field named ${fill[1]} on this page. I did not send its value anywhere.`,
+      });
+    }
     const [t] = hits;
     return result({ kind: 'fill', targetId: t.id, value: fill[2], speech: `Updated ${t.label}.`, needsConfirmation: t.confirm === true });
+  }
+
+  const toggle = /^(check|uncheck)\s+(.+)$/i.exec(text);
+  if (toggle) {
+    const hits = targets.filter((t) => t.kind === 'field' && /^Checkbox;/.test(t.description ?? '') && bare(t.label) === bare(toggle[2]));
+    if (hits.length !== 1) {
+      return result({ kind: 'clarify', speech: hits.length ? 'I found more than one matching checkbox. Which one do you mean?' : `I can't find a visible checkbox named ${toggle[2]}.` });
+    }
+    const [target] = hits;
+    const value = toggle[1].toLowerCase() === 'check' ? 'checked' : 'unchecked';
+    return result({ kind: 'fill', targetId: target.id, value, speech: `${toggle[1] === 'check' ? 'Checked' : 'Unchecked'} ${target.label}.` });
   }
 
   const verb = /^(?:go to|open|show(?: me)?|take me to|navigate to|press|click|tap)\s+(.+?)(?: page)?$/.exec(u);

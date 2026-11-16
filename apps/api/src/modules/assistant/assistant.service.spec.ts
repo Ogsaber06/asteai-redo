@@ -87,6 +87,26 @@ describe('AssistantService', () => {
     assert.equal(result.targetId, null);
   });
 
+  it('does not speak invented account or workflow facts when no page data was provided', async () => {
+    const { svc } = serviceReplying({
+      kind: 'answer', targetId: '', value: '', speech: 'Your payment is complete and your balance is ₹12,000.',
+    });
+    const result = await svc.resolve(user, cmd);
+    assert.equal(result.kind, 'clarify');
+    assert.equal(result.speech, "I don't have live page data to verify that. I can open the relevant section or help with its visible controls.");
+    assert.doesNotMatch(result.speech, /payment is complete|12,000/);
+  });
+
+  it('replaces untrusted model clarification text with a safe prompt', async () => {
+    const { svc } = serviceReplying({
+      kind: 'clarify', targetId: '', value: '', speech: 'Your profile was rejected. Which payment would you like to refund?',
+    });
+    const result = await svc.resolve(user, cmd);
+    assert.equal(result.kind, 'clarify');
+    assert.equal(result.speech, "I couldn't match that request to a visible control. What would you like me to open or do?");
+    assert.doesNotMatch(result.speech, /profile was rejected|refund/);
+  });
+
   it('clarifies when valid JSON does not match the command schema', async () => {
     const { svc } = serviceReplying({ kind: 'drop', targetId: 'route:requisitions', speech: 'Done.' });
     assert.equal((await svc.resolve(user, cmd)).kind, 'clarify');

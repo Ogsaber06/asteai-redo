@@ -24,6 +24,12 @@ type Phase = 'idle' | 'listening' | 'thinking' | 'confirm';
 const VOICE_OFF_PATHS = ['/platform/assess', '/platform/studio', '/platform/career/interview', '/platform/career/challenges'];
 const requestTimeoutMs = 10_000;
 const listeningTimeoutMs = 15_000;
+const maxVoiceTargets = 150;
+
+function availableTargets(role: UserRole): RegisteredTarget[] {
+  const routes = routeTargets(role);
+  return [...routes, ...pageTargets(routes)].slice(0, maxVoiceTargets);
+}
 
 export function VoiceAssistant({ role }: { role: UserRole }) {
   const pathname = usePathname();
@@ -91,13 +97,24 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
 
   const run = useCallback(async (cmd: VoiceCommandResult, targets: RegisteredTarget[]) => {
     try {
-      const currentTargets = [...routeTargets(role), ...pageTargets()];
+      const currentTargets = availableTargets(role);
       // Only use the same registration that was offered when the command was resolved.
       const active = currentTargets.filter((target) => targets.some((offered) =>
-        target.kind === 'route' ? offered.id === target.id : offered === target,
+        offered.id === target.id && offered.kind === target.kind && offered.label === target.label &&
+        offered.description === target.description && offered.confirm === target.confirm,
       ));
       const ok = await execute(cmd, active, router);
-      if (mounted.current) say(ok ? cmd.speech : "That isn't available on this page any more.");
+      if (mounted.current) {
+        const selected = active.find((target) => target.id === cmd.targetId);
+        const feedback = !ok ? "That isn't available on this page any more."
+          : cmd.kind === 'navigate' ? `Opening ${selected?.label ?? 'that page'}.`
+            : cmd.kind === 'fill' ? `Updated ${selected?.label ?? 'the field'}.`
+              : cmd.kind === 'invoke' ? `I triggered ${selected?.label ?? 'that control'}. Check the page for the result.`
+                : cmd.kind === 'back' ? 'Going back.'
+                  : cmd.kind === 'scroll' ? ''
+                : cmd.speech;
+        say(feedback);
+      }
     } catch (err) {
       if (mounted.current) say(errorMessage(err, 'Could not complete that action.'));
     } finally {
@@ -114,7 +131,7 @@ function VoiceDock({ role, pathname }: { role: UserRole; pathname: string }) {
       return;
     }
 
-    const targets: RegisteredTarget[] = [...routeTargets(role), ...pageTargets()];
+    const targets = availableTargets(role);
     setPhase('thinking');
     let cmd = matchLocally(utterance, targets, !!clarification.current);
     if (!cmd) {

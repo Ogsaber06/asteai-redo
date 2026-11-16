@@ -31,11 +31,29 @@ describe('matchLocally', () => {
     assert.equal(matchLocally('open search', targets), null);
   });
 
-  it('handles polite navigation and gives exact field commands a local path', () => {
+  it('handles polite navigation and keeps exact field values local', () => {
     assert.equal(matchLocally('Hey AsteAI, could you please take me to my applications?', targets)?.targetId, 'route:applications');
     const filled = matchLocally('Please fill search with C++ / Node.js', targets);
     assert.deepEqual([filled?.kind, filled?.targetId, filled?.value], ['fill', 'field:search', 'C++ / Node.js']);
-    assert.equal(matchLocally('set missing to C++', targets), null);
+    assert.equal(matchLocally('set missing to C++', targets)?.kind, 'clarify');
+    assert.doesNotMatch(matchLocally('set missing to C++', targets)?.speech ?? '', /C\+\+/);
+  });
+
+  it('answers the supported help question from known assistant capabilities', () => {
+    const help = matchLocally('What can you do?', targets);
+    assert.equal(help?.kind, 'answer');
+    assert.match(help?.speech ?? '', /open sections|fill labeled fields|confirm/i);
+  });
+
+  it('checks and unchecks a visible checkbox without sending field values to the model', () => {
+    const withCheckbox = [...targets, {
+      id: 'dom:control-1', kind: 'field' as const, label: 'Agree to terms',
+      description: 'Checkbox; currently unchecked.',
+    }];
+    const checked = matchLocally('check agree to terms', withCheckbox);
+    assert.deepEqual([checked?.kind, checked?.targetId, checked?.value], ['fill', 'dom:control-1', 'checked']);
+    const unchecked = matchLocally('uncheck agree to terms', withCheckbox);
+    assert.deepEqual([unchecked?.kind, unchecked?.targetId, unchecked?.value], ['fill', 'dom:control-1', 'unchecked']);
   });
 
   it('leaves unknown pages and questions to the server', () => {
