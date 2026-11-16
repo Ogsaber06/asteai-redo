@@ -122,14 +122,14 @@ export function Hero() {
           </div>
           <dl className={styles.meters}>
             {SAMPLE_SCORES.map((s) => (
+              // dl > div > dt + dd is the only grouping a <dl> allows; the bar is a second,
+              // decorative <dd> so the label/value pair stays a proper term/description.
               <div key={s.label} className={styles.meter}>
-                <div className={styles.meterHead}>
-                  <dt>{s.label}</dt>
-                  <dd>{s.value}</dd>
-                </div>
-                <div className={styles.meterTrack} aria-hidden="true">
+                <dt className={styles.meterLabel}>{s.label}</dt>
+                <dd className={styles.meterValue}>{s.value}</dd>
+                <dd className={styles.meterTrack} aria-hidden="true">
                   <div className={styles.meterFill} style={{ width: `${s.value}%` }} />
-                </div>
+                </dd>
               </div>
             ))}
           </dl>

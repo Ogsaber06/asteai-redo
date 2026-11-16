@@ -8,3 +8,7 @@ dist
 coverage
 .turbo
 *.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/

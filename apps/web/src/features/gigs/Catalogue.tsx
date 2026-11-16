@@ -30,7 +30,11 @@ function queryString(f: Filters, page: number): string {
 }
 
 /** /platform/services: the searchable catalogue of published services, with the order flow in a dialog. */
-export function Catalogue() {
+/** Where an order lands after it's placed (the sourcing workspace passes its own routes). */
+export interface GigRoutes { orders: string; contracts: string }
+export const DEFAULT_GIG_ROUTES: GigRoutes = { orders: '/platform/orders', contracts: '/platform/contracts' };
+
+export function Catalogue({ routes = DEFAULT_GIG_ROUTES }: { routes?: GigRoutes } = {}) {
   const [draft, setDraft] = useState<Filters>(EMPTY);
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [page, setPage] = useState(1);
@@ -89,7 +93,7 @@ export function Catalogue() {
         </div>
       )}
 
-      {open && <ServiceDialog slug={open} onClose={() => setOpen(null)} />}
+      {open && <ServiceDialog slug={open} routes={routes} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -115,7 +119,7 @@ function ServiceCardView({ service: s, onOpen }: { service: ServiceCard; onOpen:
 }
 
 /** Package picker, then the order form, then a confirm step before anything is created. */
-function ServiceDialog({ slug, onClose }: { slug: string; onClose: () => void }) {
+function ServiceDialog({ slug, routes, onClose }: { slug: string; routes: GigRoutes; onClose: () => void }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { data: service, error, isLoading } = useSWR<ServiceDetail>(`/services/${encodeURIComponent(slug)}`, fetcher);
@@ -139,7 +143,7 @@ function ServiceDialog({ slug, onClose }: { slug: string; onClose: () => void })
     setFail(null);
     try {
       const order = await gigsApi.order({ packageId: picked.id, requirements: requirements.trim(), acceptTerms: true });
-      router.push(order.contractId ? `/platform/contracts/${encodeURIComponent(order.contractId)}` : `/platform/orders/${encodeURIComponent(order.id)}`);
+      router.push(order.contractId ? `${routes.contracts}/${encodeURIComponent(order.contractId)}` : `${routes.orders}/${encodeURIComponent(order.id)}`);
     } catch (err) {
       setFail(errorMessage(err, 'Could not place the order.'));
       setBusy(false);

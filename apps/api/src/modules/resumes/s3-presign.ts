@@ -25,6 +25,8 @@ export interface PresignInput {
   signedHeaders?: Record<string, string>;
   /** Defaults to the virtual-hosted endpoint `<bucket>.s3.<region>.amazonaws.com`. */
   host?: string;
+  /** Extra signed query parameters, e.g. response-content-disposition for downloads. */
+  query?: Record<string, string>;
   now?: Date;
 }
 
@@ -61,6 +63,7 @@ export function presignS3Url(input: PresignInput): string {
     'X-Amz-SignedHeaders': signedHeaderList,
   };
   if (input.credentials.sessionToken) query['X-Amz-Security-Token'] = input.credentials.sessionToken;
+  Object.assign(query, input.query ?? {});
   const canonicalQuery = Object.keys(query).sort().map((k) => `${uriEncode(k)}=${uriEncode(query[k])}`).join('&');
 
   const path = `/${uriEncode(input.key.replace(/^\/+/, ''), true)}`;

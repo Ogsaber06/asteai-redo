@@ -492,6 +492,32 @@ Done:
 Decided / deferred:
 - CSP uses `'unsafe-inline'` for scripts instead of a nonce: a per-request nonce would make every page dynamic and drop static generation. Revisit with Next's experimental SRI/hash support or if the marketing site moves to dynamic rendering anyway.
 - Consent banner: not added, because the redo loads no analytics or marketing scripts yet (only strictly necessary storage). `/consent-preferences` + the `asteai:consent` event are ready; add the banner in the same change that adds PostHog/New Relic/Sentry, and gate them on the cookie. Termly is not used.
-- [ ] Playwright e2e + axe in CI (needs browser binaries downloaded in CI; the API smoke script covers the backend flows meanwhile).
+- [x] Playwright + `@axe-core/playwright` suite (`apps/web/e2e/a11y.spec.ts`, `bun run test:a11y`, 2026-11-15). It covers `/`, `/for-companies`, `/pricing`, `/jobs` and `/auth/login` in light and dark: zero critical/serious axe issues (WCAG 2.1 AA) and zero CSP violations, 10/10 passing. It found and fixed two things:
+  - an invalid `<dl>` in the home-page meters;
+  - `/pricing` hanging when the API was down and Next's fetch cache was stale. `serverGet()` now has its own cache with a timeout and a 24 h stale fallback.
+- [ ] Run the a11y suite in CI (needs `bunx playwright install chromium`); extend it to signed-in workspace pages.
 - [ ] `next/image` + AVIF for content images (the redo has none yet), JS budget check in CI.
 - [ ] Admin moderation queue for public jobs.
+
+### Phase 5 — Monetisation, Career, Hire & Sourcing ✅ (verified 2026-11-15: unit-tested, migrations checked on local Postgres)
+- [x] **Auth:** HttpOnly cookie sessions (`asteai_at` / `asteai_rt` / `asteai_session`), Google + GitHub OAuth with PKCE (`021_oauth_identities.sql`), web client moved to `credentials: 'include'` with single-flight refresh.
+- [x] **Credits:** FIFO ledger with expiry (`022`, `023`); `@ChargeCredits` interceptor and `runMetered()` with auto-refund; Razorpay top-ups, Pro subscription, signed webhook. `/platform/wallet` with packs (up to 30% off); `/pricing` reads tiers and the credit cost table live.
+- [x] **Career Studio (`024`, `025`):**
+  - Ed25519-signed credentials with public `/verify/:code`, and public passports at `/passport/[slug]`.
+  - Judge0 code challenges and the AI Interview Studio (10 credits, voice mode for trades).
+  - S3 résumé upload with AI autofill (15 credits).
+  - Web: `/platform/career/*`.
+- [x] **Enterprise Hire (`026`):**
+  - AI Job Creator (15 credits) and requisition approval workflow.
+  - `Screened` stage with validated transitions.
+  - Talent CRM Kanban pools and bulk outreach with signed unsubscribe and suppression.
+  - Hiring KPIs.
+  - Web: `/platform/hire/*`.
+- [x] **Sourcing (`027`, `028`):**
+  - AI & voice expert search (15 credits).
+  - SOW on proposals → contract draft; milestone escrow with `approve-release` and milestone disputes.
+  - S3 deliverable uploads with signed downloads.
+  - Web: `/platform/sourcing/*`.
+- [x] Migration check (2026-11-15, local PostgreSQL 18 throwaway cluster): 001–028 apply from empty, and 015–028 re-run cleanly. This caught 026 colliding with 001's `talent_pools` / `outreach_campaigns`; the new tables are now `crm_pools`, `crm_pool_members`, `outreach_email_campaigns` and `outreach_email_messages`. **015–028 are not yet applied to the shared RDS database.**
+- [ ] Confirm seeded commercial values before going live: credit pack prices, `ai_interview` = 10, `ai_job_creator` = 15, `ai_search` = 15.
+- [ ] Retire the legacy `talent_pools` / `outreach_campaigns` (still used by `tenants.service.ts` and `seed.mjs`) once the CRM replaces them.

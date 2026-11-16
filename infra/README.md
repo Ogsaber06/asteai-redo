@@ -121,9 +121,30 @@ psql "host=$ENDPOINT port=5432 dbname=asteai user=asteai_root \
 
 ## Re-running the schema migration
 
-The `null_resource.schema_init` triggers on the SHA256 of the SQL file.  
-When you add a new migration file, add a second `null_resource` block or
-update the trigger to include the new file hash.
+The `null_resource.schema_init` only applies `001_initial_schema.sql` (it triggers on
+that file's SHA256). Apply everything else with the repo's migration runner, which
+tracks each file in `schema_migrations`:
+
+```bash
+# Download the RDS CA bundle once
+curl -o /tmp/rds-global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+
+export DATABASE_HOST=$(tofu output -raw rds_endpoint) DATABASE_NAME=asteai AWS_REGION=ap-south-1
+export DATABASE_MIGRATION_USER=asteai_root DATABASE_IAM_AUTH=true DATABASE_SSL=true
+export DATABASE_SSL_REJECT_UNAUTHORIZED=true NODE_EXTRA_CA_CERTS=/tmp/rds-global-bundle.pem
+
+# If schema_init already ran 001, tell the runner first (--status creates schema_migrations):
+bun run --filter @asteai/db migrate:status
+#   INSERT INTO schema_migrations (name) VALUES ('001_initial_schema.sql');
+bun run --filter @asteai/db migrate
+```
+
+Notes:
+- Run as the master user: the migrations create extensions, types and tables.
+- The runner signs a 15-minute IAM token itself and connects once, so token expiry is no problem.
+- An advisory lock serialises concurrent runs, such as several API tasks starting at once.
+- Each file is its own transaction, so a failure rolls back that file and stops the run.
+- `DATABASE_URL`, if set, overrides all of the above.
 
 ## Destroy
 

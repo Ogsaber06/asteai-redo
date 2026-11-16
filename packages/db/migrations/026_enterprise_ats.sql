@@ -33,7 +33,7 @@ ON CONFLICT (feature) DO NOTHING;
 
 -- ── Talent CRM pools (Kanban) ─────────────────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS talent_pools (
+CREATE TABLE IF NOT EXISTS crm_pools (
   id           UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id    VARCHAR(64)   NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   name         VARCHAR(120)  NOT NULL,
@@ -45,11 +45,11 @@ CREATE TABLE IF NOT EXISTS talent_pools (
   created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_talent_pools_tenant ON talent_pools(tenant_id) WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_crm_pools_tenant ON crm_pools(tenant_id) WHERE archived_at IS NULL;
 
-CREATE TABLE IF NOT EXISTS talent_pool_members (
+CREATE TABLE IF NOT EXISTS crm_pool_members (
   id          UUID              PRIMARY KEY DEFAULT uuid_generate_v4(),
-  pool_id     UUID              NOT NULL REFERENCES talent_pools(id) ON DELETE CASCADE,
+  pool_id     UUID              NOT NULL REFERENCES crm_pools(id) ON DELETE CASCADE,
   -- A platform user, or an external prospect known only by email.
   user_id     UUID              REFERENCES user_accounts(id) ON DELETE SET NULL,
   email       VARCHAR(255)      NOT NULL,
@@ -63,15 +63,15 @@ CREATE TABLE IF NOT EXISTS talent_pool_members (
   created_at  TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uq_talent_pool_member_email ON talent_pool_members(pool_id, LOWER(email));
-CREATE INDEX IF NOT EXISTS idx_talent_pool_members_board ON talent_pool_members(pool_id, column_key, position);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_crm_pool_member_email ON crm_pool_members(pool_id, LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_crm_pool_members_board ON crm_pool_members(pool_id, column_key, position);
 
 -- ── Bulk outreach ─────────────────────────────────────────────────────────────
 -- A campaign renders one message per recipient when queued. Messages are released to
 -- email_outbox by the dispatcher no faster than rate_per_minute (send_after staggers
 -- them), so delivery status comes from the outbox row each message points at.
 
-CREATE TABLE IF NOT EXISTS outreach_campaigns (
+CREATE TABLE IF NOT EXISTS outreach_email_campaigns (
   id                UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id         VARCHAR(64)   NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   created_by        UUID          REFERENCES user_accounts(id) ON DELETE SET NULL,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS outreach_campaigns (
   subject_template  VARCHAR(200)  NOT NULL,
   body_template     TEXT          NOT NULL CHECK (char_length(body_template) <= 10000),
   requisition_id    VARCHAR(64)   REFERENCES requisitions(id) ON DELETE SET NULL,
-  pool_id           UUID          REFERENCES talent_pools(id) ON DELETE SET NULL,
+  pool_id           UUID          REFERENCES crm_pools(id) ON DELETE SET NULL,
   status            VARCHAR(10)   NOT NULL DEFAULT 'draft'
                                   CHECK (status IN ('draft', 'queued', 'completed', 'cancelled')),
   rate_per_minute   SMALLINT      NOT NULL DEFAULT 60 CHECK (rate_per_minute BETWEEN 1 AND 300),
@@ -89,11 +89,11 @@ CREATE TABLE IF NOT EXISTS outreach_campaigns (
   created_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_outreach_campaigns_tenant ON outreach_campaigns(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_outreach_email_campaigns_tenant ON outreach_email_campaigns(tenant_id, created_at DESC);
 
-CREATE TABLE IF NOT EXISTS outreach_messages (
+CREATE TABLE IF NOT EXISTS outreach_email_messages (
   id           UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
-  campaign_id  UUID          NOT NULL REFERENCES outreach_campaigns(id) ON DELETE CASCADE,
+  campaign_id  UUID          NOT NULL REFERENCES outreach_email_campaigns(id) ON DELETE CASCADE,
   tenant_id    VARCHAR(64)   NOT NULL,
   to_email     VARCHAR(255)  NOT NULL,
   to_name      VARCHAR(160)  NOT NULL DEFAULT '',
@@ -108,8 +108,8 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
   skip_reason  VARCHAR(40),
   created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uq_outreach_message_recipient ON outreach_messages(campaign_id, LOWER(to_email));
-CREATE INDEX IF NOT EXISTS idx_outreach_messages_due ON outreach_messages(send_after) WHERE status = 'queued';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_outreach_message_recipient ON outreach_email_messages(campaign_id, LOWER(to_email));
+CREATE INDEX IF NOT EXISTS idx_outreach_email_messages_due ON outreach_email_messages(send_after) WHERE status = 'queued';
 
 -- Addresses that unsubscribed from a tenant's outreach. Checked at queue and at release.
 CREATE TABLE IF NOT EXISTS outreach_suppressions (

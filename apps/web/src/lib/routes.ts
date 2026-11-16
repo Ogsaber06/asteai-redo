@@ -74,6 +74,7 @@ export const NAV: Record<UserRole, NavSection[]> = {
   ],
   Freelancer: [
     ['Marketplace', [
+      item('sourcing/orders', 'Orders & Escrow'),
       item('market', 'Find Projects'),
       item('proposals', 'My Proposals'),
       item('my-services', 'My Services'),
@@ -95,6 +96,7 @@ export const NAV: Record<UserRole, NavSection[]> = {
   ],
   Buyer: [
     ['Talent Sourcing', [
+      item('sourcing', 'Sourcing Workspace'),
       item('experts', 'Find Experts'),
       item('projects', 'My Projects'),
       item('services', 'Pre-Packaged Services'),

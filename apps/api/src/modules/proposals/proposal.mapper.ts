@@ -28,12 +28,12 @@ export function mapProposalRow(row: ProposalRow): Proposal {
     days: Number(row.days),
     note: row.note ?? '',
     status: row.status,
-    sow: row.sow ?? null,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
     ...(row.expert_name !== undefined && { expertName: row.expert_name }),
     ...(row.project_title !== undefined && { projectTitle: row.project_title }),
     ...(row.project_stage !== undefined && { projectStage: row.project_stage }),
     ...(row.contract_id !== undefined && { contractId: row.contract_id }),
+    ...(row.sow !== undefined && { sow: row.sow }),
   };
 }

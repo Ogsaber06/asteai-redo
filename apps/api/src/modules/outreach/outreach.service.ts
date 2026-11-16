@@ -48,7 +48,7 @@ export const DELIVERY_SQL = `
          COUNT(*) FILTER (WHERE m.status = 'released' AND o.status = 'failed')::int AS failed,
          COUNT(*) FILTER (WHERE m.status = 'skipped')::int AS skipped,
          COUNT(*) FILTER (WHERE m.status = 'cancelled')::int AS cancelled
-    FROM outreach_messages m LEFT JOIN email_outbox o ON o.id = m.outbox_id
+    FROM outreach_email_messages m LEFT JOIN email_outbox o ON o.id = m.outbox_id
    WHERE m.campaign_id = $1`;
 
 function tenantOf(user: Pick<User, 'tenantId'>): string {
@@ -94,7 +94,7 @@ export class OutreachService {
     if (!valid.length) throw new BadRequestException(invalid.length ? 'None of the addresses are valid' : 'No recipients');
 
     const { rows } = await this.db.query<CampaignRow>(
-      `INSERT INTO outreach_campaigns
+      `INSERT INTO outreach_email_campaigns
          (tenant_id, created_by, name, subject_template, body_template, requisition_id, pool_id, rate_per_minute, recipients)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb) RETURNING *`,
       [tenantId, user.id, input.name.trim(), input.subjectTemplate.trim(), input.bodyTemplate.trim(), input.requisitionId ?? null,
@@ -106,7 +106,7 @@ export class OutreachService {
   private async load(db: Pick<PoolClient, 'query'>, user: User, id: string, forUpdate = false): Promise<CampaignRow> {
     if (!UUID.test(id)) throw new NotFoundException('Campaign not found');
     const { rows } = await db.query<CampaignRow>(
-      `SELECT * FROM outreach_campaigns WHERE id = $1 AND tenant_id = $2 ${forUpdate ? 'FOR UPDATE' : ''}`, [id, tenantOf(user)],
+      `SELECT * FROM outreach_email_campaigns WHERE id = $1 AND tenant_id = $2 ${forUpdate ? 'FOR UPDATE' : ''}`, [id, tenantOf(user)],
     );
     if (!rows.length) throw new NotFoundException('Campaign not found');
     return rows[0];
@@ -125,7 +125,7 @@ export class OutreachService {
       // Serialize queueing per company so two campaigns can't both squeeze under the cap.
       await c.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`outreach:${campaign.tenant_id}`]);
       const { rows: used } = await c.query<{ n: number }>(
-        `SELECT COUNT(*)::int AS n FROM outreach_messages
+        `SELECT COUNT(*)::int AS n FROM outreach_email_messages
           WHERE tenant_id = $1 AND status <> 'skipped' AND created_at > NOW() - INTERVAL '24 hours'`,
         [campaign.tenant_id],
       );
@@ -167,14 +167,14 @@ export class OutreachService {
         };
       });
       await c.query(
-        `INSERT INTO outreach_messages (campaign_id, tenant_id, to_email, to_name, subject, body, status, skip_reason, send_after)
+        `INSERT INTO outreach_email_messages (campaign_id, tenant_id, to_email, to_name, subject, body, status, skip_reason, send_after)
          SELECT $1, $2, v.to_email, v.to_name, v.subject, v.body, v.status, v.skip_reason, v.send_after
            FROM jsonb_to_recordset($3::jsonb) AS v(to_email text, to_name text, subject text, body text, status text, skip_reason text, send_after timestamptz)
          ON CONFLICT DO NOTHING`,
         [campaign.id, campaign.tenant_id, JSON.stringify(messages)],
       );
       const { rows } = await c.query<CampaignRow>(
-        `UPDATE outreach_campaigns SET status = 'queued', queued_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *`, [campaign.id],
+        `UPDATE outreach_email_campaigns SET status = 'queued', queued_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *`, [campaign.id],
       );
       return this.map(rows[0], await this.delivery(c, campaign.id));
     });
@@ -187,9 +187,9 @@ export class OutreachService {
       if (campaign.status === 'completed' || campaign.status === 'cancelled') {
         throw new ConflictException(`This campaign is already ${campaign.status}`);
       }
-      await c.query(`UPDATE outreach_messages SET status = 'cancelled' WHERE campaign_id = $1 AND status = 'queued'`, [id]);
+      await c.query(`UPDATE outreach_email_messages SET status = 'cancelled' WHERE campaign_id = $1 AND status = 'queued'`, [id]);
       const { rows } = await c.query<CampaignRow>(
-        `UPDATE outreach_campaigns SET status = 'cancelled', completed_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *`, [id],
+        `UPDATE outreach_email_campaigns SET status = 'cancelled', completed_at = NOW(), updated_at = NOW() WHERE id = $1 RETURNING *`, [id],
       );
       return this.map(rows[0], await this.delivery(c, id));
     });
@@ -197,7 +197,7 @@ export class OutreachService {
 
   async list(user: User): Promise<OutreachEmailCampaign[]> {
     const { rows } = await this.db.query<CampaignRow>(
-      `SELECT * FROM outreach_campaigns WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100`, [tenantOf(user)],
+      `SELECT * FROM outreach_email_campaigns WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100`, [tenantOf(user)],
     );
     return Promise.all(rows.map(async (r) => this.map(r, r.status === 'draft' ? null : await this.delivery(this.db, r.id))));
   }
@@ -216,7 +216,7 @@ export class OutreachService {
     }>(
       `SELECT m.id, m.to_email, m.to_name, m.status, o.status AS outbox_status, m.send_after, m.released_at, o.sent_at,
               m.skip_reason, o.last_error
-         FROM outreach_messages m LEFT JOIN email_outbox o ON o.id = m.outbox_id
+         FROM outreach_email_messages m LEFT JOIN email_outbox o ON o.id = m.outbox_id
         WHERE m.campaign_id = $1 ORDER BY m.send_after LIMIT 1000`,
       [id],
     );
@@ -242,7 +242,7 @@ export class OutreachService {
         `INSERT INTO outreach_suppressions (tenant_id, email) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [who.tenantId, who.email],
       );
       await c.query(
-        `UPDATE outreach_messages SET status = 'skipped', skip_reason = 'unsubscribed'
+        `UPDATE outreach_email_messages SET status = 'skipped', skip_reason = 'unsubscribed'
           WHERE tenant_id = $1 AND LOWER(to_email) = $2 AND status = 'queued'`,
         [who.tenantId, who.email],
       );

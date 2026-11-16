@@ -9,6 +9,7 @@
     "seed": "bun seed.mjs"
   },
   "dependencies": {
+    "@aws-sdk/rds-signer": "^3.600.0",
     "pg": "^8.13.3"
   }
 }

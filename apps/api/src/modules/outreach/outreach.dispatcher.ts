@@ -61,8 +61,8 @@ export class OutreachDispatcher implements OnApplicationBootstrap, OnApplication
       }>(
         `SELECT m.id, m.tenant_id, m.to_email, m.subject, m.body, t.name AS company,
                 EXISTS (SELECT 1 FROM outreach_suppressions s WHERE s.tenant_id = m.tenant_id AND s.email = LOWER(m.to_email)) AS suppressed
-           FROM outreach_messages m
-           JOIN outreach_campaigns c ON c.id = m.campaign_id AND c.status = 'queued'
+           FROM outreach_email_messages m
+           JOIN outreach_email_campaigns c ON c.id = m.campaign_id AND c.status = 'queued'
            JOIN tenants t ON t.id = m.tenant_id
           WHERE m.status = 'queued' AND m.send_after <= NOW()
           ORDER BY m.send_after
@@ -73,7 +73,7 @@ export class OutreachDispatcher implements OnApplicationBootstrap, OnApplication
       let skipped = 0;
       for (const m of rows) {
         if (m.suppressed) {
-          await c.query(`UPDATE outreach_messages SET status = 'skipped', skip_reason = 'unsubscribed' WHERE id = $1`, [m.id]);
+          await c.query(`UPDATE outreach_email_messages SET status = 'skipped', skip_reason = 'unsubscribed' WHERE id = $1`, [m.id]);
           skipped++;
           continue;
         }
@@ -83,15 +83,15 @@ export class OutreachDispatcher implements OnApplicationBootstrap, OnApplication
           unsubscribePath: `/api/v1/outreach/unsubscribe?token=${encodeURIComponent(token)}`,
         }, { client: c, dedupeKey: `outreach:${m.id}` });
         await c.query(
-          `UPDATE outreach_messages SET status = 'released', outbox_id = $2, released_at = NOW() WHERE id = $1`, [m.id, outboxId],
+          `UPDATE outreach_email_messages SET status = 'released', outbox_id = $2, released_at = NOW() WHERE id = $1`, [m.id, outboxId],
         );
         released++;
       }
       // A queued campaign with nothing left to release is complete.
       await c.query(
-        `UPDATE outreach_campaigns c SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+        `UPDATE outreach_email_campaigns c SET status = 'completed', completed_at = NOW(), updated_at = NOW()
           WHERE c.status = 'queued'
-            AND NOT EXISTS (SELECT 1 FROM outreach_messages m WHERE m.campaign_id = c.id AND m.status = 'queued')`,
+            AND NOT EXISTS (SELECT 1 FROM outreach_email_messages m WHERE m.campaign_id = c.id AND m.status = 'queued')`,
       );
       if (released || skipped) this.logger.log(`Outreach: released ${released}, skipped ${skipped}`);
       return { released, skipped };

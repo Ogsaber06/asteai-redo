@@ -47,6 +47,7 @@ import { JobCreatorModule } from './modules/job-creator/job-creator.module';
 import { TalentPoolsModule } from './modules/talent-pools/talent-pools.module';
 import { OutreachModule } from './modules/outreach/outreach.module';
 import { ExpertSearchModule } from './modules/expert-search/expert-search.module';
+import { DeliverablesModule } from './modules/deliverables/deliverables.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { ExpertSearchModule } from './modules/expert-search/expert-search.module
     TalentPoolsModule,
     OutreachModule,
     ExpertSearchModule,
+    DeliverablesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
